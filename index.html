@@ -1,0 +1,1603 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Barbie House Pink Salon</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<script>
+/* ===================== SETUP =====================
+   1. Paste your Google Apps Script web app URL between the quotes below.
+      (Leave it empty to run in preview mode: nothing is saved online.)
+   2. Change the texts if you like. Everything else runs on its own.     */
+window.SALON_CONFIG = {
+  SHEET_URL: "https://script.google.com/macros/s/AKfycbwi7TC4W8SQnqwmjaFWLX7peKe8L0pi5ffXUm9Y8yZVADp33zBjA2qaxSnRNZYICsEV/exec",
+  ROOM_NAME: "The Pink Salon",
+  HOUSE_NAME: "The Barbie House",
+  PROJECT_LINE: "An AMFI × Glitch Magazine research project",
+  CONTACT_EMAIL: ""   // shown on the guest pass for data questions (optional)
+};
+/* ================================================== */
+</script>
+
+<style>
+/* Layout: full-screen WebGL salon behind everything. Overlays (welcome, guest pass, rating sheet, curator) are dark glass panels.
+   Phone: the rating sheet is a bottom sheet and the camera re-centres the art in the space above it. Wide screens: a right-hand panel. */
+:root{
+  --ink:#141016; --panel:#1e1820; --panel2:#282029; --line:#3d3140; --fg:#f7eef2; --muted:#b9a8b0;
+  --pink:#e0558f; --blush:#f6c9d8; --coral:#ff5a4e; --cyan:#7fd6ff;
+  --human:#ffb86b; --ai:#7fd6ff; --both:#c9a2ff;
+  --ok:#8be0a4; --bad:#ff8a80;
+  --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --side:min(400px,46vw);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--mono);font-size:13.5px;line-height:1.5;overflow:hidden;-webkit-tap-highlight-color:transparent}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;transition:transform .08s,background-color .15s,border-color .15s}
+button:active:not(:disabled){transform:scale(.95)}
+.need{border-radius:14px;box-shadow:0 0 0 2px var(--coral);animation:nudge .45s}
+@keyframes nudge{0%,100%{translate:0}25%{translate:-5px}75%{translate:5px}}
+button:focus-visible,input:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid var(--cyan);outline-offset:2px}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.glitch{text-shadow:2px 0 var(--coral),-2px 0 var(--cyan)}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1,h2,h3{font-family:var(--display);font-weight:800;letter-spacing:-.02em;line-height:1;margin:0;text-wrap:balance}
+p{margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;
+  background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:11px 16px;min-height:42px}
+.btn.primary{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{padding:7px 12px;min-height:34px;font-size:11px}
+.link{background:none;border:none;padding:0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-size:12px}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* HUD */
+.hud{position:fixed;z-index:5;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none;
+  padding-top:calc(14px + env(safe-area-inset-top,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hud > *{pointer-events:auto}
+.brand{display:grid;gap:3px;background:rgba(30,24,32,.86);border:1px solid var(--line);border-radius:14px;padding:8px 12px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.brand b{font-family:var(--display);font-weight:800;font-size:clamp(17px,3.4vw,24px);letter-spacing:-.02em;line-height:1}
+.brand span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--blush)}
+.hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.pill{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;background:rgba(30,24,32,.88);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:12px;letter-spacing:.06em;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-variant-numeric:tabular-nums}
+.pill .dots{display:flex;gap:3px}
+.pill .dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.pill .dots i.on{background:var(--pink)}
+@media (max-width:520px){.pill .dots{display:none}}
+.brand b{white-space:nowrap}
+.savestate{font-size:10.5px;letter-spacing:.06em;color:var(--fg);background:rgba(30,24,32,.86);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.savestate:empty{display:none}
+.savestate.warn{color:var(--human);border-color:var(--human)}
+.demo-note{font-size:11px;color:var(--human);border:1px dashed var(--human);border-radius:12px;padding:8px 10px;line-height:1.45}
+
+/* room bar */
+.roombar{position:fixed;z-index:5;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;
+  padding-block:16px calc(30px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:linear-gradient(0deg,rgba(20,16,22,.6),rgba(20,16,22,0));pointer-events:none}
+.roombar > *{pointer-events:auto}
+.coach{position:fixed;z-index:5;left:50%;transform:translateX(-50%);top:calc(74px + env(safe-area-inset-top,0px));font-size:12px;letter-spacing:.04em;text-align:center;
+  background:rgba(30,24,32,.86);border:1px solid var(--line);border-radius:14px;padding:8px 14px;max-width:calc(100% - 32px);width:max-content;pointer-events:none;transition:opacity .5s}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:20;overflow:auto;display:grid;
+  padding-block:calc(24px + env(safe-area-inset-top,0px)) calc(28px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:rgba(20,16,22,.55);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
+.overlay > *{margin:auto}
+.card{width:min(100%,520px);background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:24px 22px;display:grid;gap:16px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.welcome h1{font-size:clamp(44px,11vw,72px);line-height:.88}
+.welcome .lede{font-size:14px;line-height:1.55;color:var(--fg)}
+.facts{display:flex;flex-wrap:wrap;gap:6px}
+.facts span{font-size:11px;letter-spacing:.06em;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted)}
+.makers{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:4px 10px;border:1px solid currentColor}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.c-human{color:var(--human)}.c-ai{color:var(--ai)}.c-both{color:var(--both)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fine{font-size:11px;color:var(--muted);line-height:1.5}
+.status{font-size:12px;color:var(--muted)}
+.status.err{color:var(--bad)}
+
+/* forms */
+.field{display:grid;gap:6px}
+.field > span,.qlabel{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg)}
+.field small{font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none}
+.input,textarea.input{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:14px;min-height:44px}
+textarea.input{min-height:72px;resize:vertical;line-height:1.45}
+.input:focus{border-color:var(--cyan);outline:none}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{background:transparent;border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:12.5px;min-height:40px}
+.seg button[aria-pressed="true"]{background:var(--pink);border-color:var(--pink);color:#fff}
+.seg.makerseg button[data-v="human"][aria-pressed="true"]{background:var(--human);border-color:var(--human);color:#1d1408}
+.seg.makerseg button[data-v="ai"][aria-pressed="true"]{background:var(--ai);border-color:var(--ai);color:#071a22}
+.seg.makerseg button[data-v="both"][aria-pressed="true"]{background:var(--both);border-color:var(--both);color:#170d24}
+.check{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:12.5px;line-height:1.45;cursor:pointer;border-radius:10px}
+.check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--pink)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.grid2{grid-template-columns:1fr}}
+
+/* scales */
+.scale{display:grid;gap:6px}
+.scale .qhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.scale .ends{font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+.dots5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.dots5 button{position:relative;min-height:42px;border-radius:12px;background:transparent;border:1px solid var(--line);font-size:14px;font-variant-numeric:tabular-nums}
+.dots5 button[aria-pressed="true"]{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600}
+.dots5 button.before::after{content:"before";position:absolute;left:50%;transform:translateX(-50%);bottom:-15px;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dots5.has-before{margin-bottom:12px}
+
+/* rating sheet */
+.sheet{position:fixed;z-index:10;left:0;right:0;bottom:0;height:56%;background:var(--panel);border-top:1px solid var(--line);border-radius:22px 22px 0 0;
+  display:flex;flex-direction:column;box-shadow:0 -24px 60px rgba(0,0,0,.45);transition:transform .45s cubic-bezier(.2,.8,.2,1),height .35s}
+.sheet.closed{transform:translateY(105%)}
+.sheet-top{display:flex;align-items:center;gap:8px;padding:12px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
+.sheet-id{flex:1;min-width:0;display:grid;gap:3px}
+.sheet-id h2{font-size:clamp(20px,5vw,26px);overflow-wrap:anywhere}
+.iconbtn{width:40px;height:40px;flex:none;border-radius:50%;background:var(--panel2);border:1px solid var(--line);font-size:20px;line-height:1;display:grid;place-items:center}
+.sheet-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0 max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.sheet-tools .fine{flex:1;min-width:0}
+.sheet-body{flex:1;overflow:auto;display:grid;align-content:start;gap:18px;
+  padding-block:16px calc(24px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overscroll-behavior:contain}
+.sheet.collapsed{height:auto}
+.sheet.collapsed .sheet-body{display:none}
+.sheet.collapsed .sheet-tools{border-bottom:none;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+@media (min-width:820px),(orientation:landscape) and (min-width:640px){
+  .sheet{left:auto;top:0;width:var(--side);height:auto;border-radius:0;border-top:none;border-left:1px solid var(--line);box-shadow:-24px 0 60px rgba(0,0,0,.4);
+    padding-top:env(safe-area-inset-top,0px);transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+  .sheet.closed{transform:translateX(105%)}
+  .sheet.collapsed{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));right:max(16px,env(safe-area-inset-right,0px));border:1px solid var(--line);border-radius:18px;padding-top:0}
+}
+.step{display:grid;gap:16px}
+.step h3{font-size:18px}
+.reveal{border-radius:16px;padding:16px;display:grid;gap:10px;border:1px solid var(--line);background:var(--ink);animation:pop .55s cubic-bezier(.2,.9,.25,1.2)}
+.reveal .who{font-family:var(--display);font-weight:800;font-size:clamp(30px,8vw,40px);line-height:.95}
+.reveal .verdict{font-size:12.5px;letter-spacing:.04em}
+.reveal .verdict.yes{color:var(--ok)}.reveal .verdict.no{color:var(--bad)}
+.reveal dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0;font-size:12.5px}
+.reveal dt{color:var(--muted);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding-top:2px}
+.reveal dd{margin:0;overflow-wrap:anywhere}
+@keyframes pop{0%{transform:scale(.94);opacity:0;filter:blur(4px)}100%{transform:none;opacity:1;filter:none}}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags button{background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:12px;min-height:36px}
+.tags button[aria-pressed="true"]{border-color:var(--cyan);color:var(--cyan);background:rgba(127,214,255,.08)}
+.hintline{font-size:11.5px;color:var(--muted)}
+
+/* index + final */
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+.thumb{position:relative;display:grid;gap:5px;background:transparent;border:1px solid var(--line);border-radius:14px;padding:6px;text-align:left}
+.thumb img,.thumb .ph{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px;background:var(--panel2);display:block}
+.thumb b{font-size:11px;letter-spacing:.06em;font-weight:600}
+.thumb small{font-size:10px;color:var(--muted);letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thumb .badge{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:var(--pink);color:#fff}
+.thumb[aria-pressed="true"]{border-color:var(--pink);box-shadow:0 0 0 2px var(--pink)}
+.wide{width:min(100%,760px)}
+.score{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.score b{font-family:var(--display);font-size:clamp(46px,12vw,64px);line-height:.9}
+.bymaker{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bymaker div{border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:2px;font-variant-numeric:tabular-nums}
+.bymaker span{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+.bymaker b{font-family:var(--display);font-size:22px}
+
+/* curator */
+.curator{background:rgba(20,16,22,.94)}
+.curator > .cur-wrap{margin:0 auto}
+.cur-wrap{width:min(100%,1120px);display:grid;gap:18px}
+.cur-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.cur-head h1{font-size:clamp(30px,6vw,46px)}
+.cur-stats{display:flex;gap:8px;flex-wrap:wrap}
+.cur-stats .pill b{font-family:var(--display);font-size:16px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.slot{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px;display:grid;gap:12px;align-content:start;min-width:0}
+.slot-no{display:flex;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.slot-no b{color:var(--fg)}
+.drop{position:relative;display:grid;place-items:center;aspect-ratio:4/3;border:1.5px dashed var(--line);border-radius:12px;background:var(--ink);overflow:hidden;text-align:center;color:var(--muted);font-size:12px;cursor:pointer}
+.drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop.has{border-style:solid}
+.drop .replace{position:absolute;right:8px;bottom:8px;background:rgba(20,16,22,.85);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg);pointer-events:none}
+.slot .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.slot .msg{font-size:11.5px;color:var(--muted)}
+.slot .msg.ok{color:var(--ok)}.slot .msg.err{color:var(--bad)}
+.steps{margin:0;padding-left:20px;display:grid;gap:8px;font-size:12.5px;line-height:1.5}
+.steps code,.fine code{background:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 5px;font-size:12px;overflow-wrap:anywhere}
+.qrbox{display:grid;gap:12px;justify-items:start}
+.qrbox canvas{background:#fff;border-radius:14px;padding:12px;width:220px;height:auto;max-width:100%}
+.urlline{font-size:12px;overflow-wrap:anywhere;user-select:all}
+.fade{position:fixed;inset:0;z-index:70;background:var(--ink);opacity:0;pointer-events:none;transition:opacity .38s}
+.fade.on{opacity:1}
+.vrhud{position:fixed;inset:0;z-index:15;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;
+  padding-block:calc(14px + env(safe-area-inset-top,0px)) calc(20px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.vrhud > *{pointer-events:auto}
+.vrhud .vr-bottom{display:grid;gap:10px;justify-items:center;text-align:center}
+.vrhud .hintline{color:var(--fg);background:rgba(30,24,32,.8);border-radius:999px;padding:5px 12px}
+.vrhud .brand{justify-self:start;width:max-content;max-width:100%}
+.vrhud .brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dollpick{display:flex;gap:10px;flex-wrap:wrap}
+.dollpick button{width:40px;height:54px;border-radius:20px 20px 9px 9px;border:2px solid transparent;padding:0}
+.dollpick button[aria-pressed="true"]{border-color:#fff3f7;box-shadow:0 0 0 3px var(--pink)}
+.vrnote{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--cyan);border-radius:14px;padding:10px 12px;font-size:12.5px}
+.view3d{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;background:var(--ink)}
+.view3d-top{display:flex;align-items:center;gap:8px;padding-top:calc(12px + env(safe-area-inset-top,0px));padding-bottom:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.view3d-top .sheet-id{flex:1}
+.view3d model-viewer{position:absolute;inset:0;width:100%;height:100%;background:radial-gradient(circle at 50% 42%,#5b1650,var(--ink) 72%);--poster-color:transparent}
+.view3d-foot{display:grid;gap:8px;justify-items:center;text-align:center;padding-top:10px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.toast{position:fixed;z-index:80;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:rgba(30,24,32,.95);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:12px;letter-spacing:.04em;
+  pointer-events:none;opacity:0;transition:opacity .3s;max-width:calc(100% - 32px);text-align:center}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.sheet,.toast,.coach,button,.fade{transition:none}.reveal,.need{animation:none}}
+</style>
+
+<div id="stage"></div>
+
+<div class="hud" id="hud" hidden>
+  <div class="brand"><b class="glitch" id="hudHouse">The Barbie House</b><span id="hudRoom">The Pink Salon</span></div>
+  <div class="hud-right">
+    <button class="pill" id="progressBtn" aria-label="See all pieces"><span id="progressTxt">0 / 12</span><span class="dots" id="progressDots"></span></button>
+    <span class="savestate" id="saveState"></span>
+  </div>
+</div>
+<div class="coach" id="coach" hidden>Tap the floor to walk · drag to look around · tap a frame to rate it</div>
+<div class="roombar" id="roombar" hidden>
+  <button class="btn" id="indexBtn">All pieces</button>
+  <button class="btn primary" id="nextUnratedBtn">Rate next</button>
+</div>
+
+<!-- welcome -->
+<section class="overlay" id="welcome" aria-labelledby="wTitle">
+  <div class="card welcome">
+    <div class="eyebrow" id="wHouse">The Barbie House</div>
+    <h1 class="glitch" id="wTitle">The Pink Salon</h1>
+    <p class="lede" id="wLede">Twelve pieces hang in this room. A person made some of them, AI made some, and some were made by both. Rate each piece first, then find out who made it.</p>
+    <div class="makers"><span class="chip c-human">Human</span><span class="chip c-ai">AI</span><span class="chip c-both">Both</span></div>
+    <div class="facts" id="wFacts"><span>About 8 minutes</span><span>Works on your phone</span></div>
+    <div class="actions" id="wActions"><button class="btn primary" id="startBtn" disabled>Hanging the art…</button></div>
+    <p class="status" id="wStatus" role="status"></p>
+    <p class="demo-note" id="wDemo" hidden>Preview mode: nothing is sent online yet, answers stay on this device. Open Curator to connect your Google Sheet.</p>
+    <div class="actions" style="justify-content:space-between">
+      <span class="fine" id="wProject">An AMFI × Glitch Magazine research project</span>
+      <button class="link" id="curatorLink">Curator</button>
+    </div>
+  </div>
+</section>
+
+<!-- guest pass -->
+<section class="overlay" id="pass" hidden aria-labelledby="pTitle">
+  <div class="card" id="passForm">
+    <div class="eyebrow">Guest pass</div>
+    <h2 id="pTitle" style="font-size:30px">Before you go in</h2>
+    <div class="field"><span class="qlabel" id="lDoll">Pick your doll</span><div class="dollpick" id="dollPick" role="group" aria-labelledby="lDoll"></div></div>
+    <p class="fine">Your email links your answers together and lets us send you the findings if you want them. It never appears in the results.</p>
+    <div class="grid2">
+      <label class="field"><span>First name</span><input class="input" id="pName" autocomplete="given-name" maxlength="60"></label>
+      <label class="field"><span>Email *</span><input class="input" id="pEmail" type="email" inputmode="email" autocomplete="email" maxlength="120" required></label>
+    </div>
+    <div class="field"><span class="qlabel" id="lAge">Age</span><div class="seg" data-field="age" aria-labelledby="lAge">
+      <button type="button" data-v="18-24">18–24</button><button type="button" data-v="25-34">25–34</button><button type="button" data-v="35-44">35–44</button><button type="button" data-v="45+">45+</button></div></div>
+    <div class="field"><span class="qlabel" id="lField">What's your field?</span><div class="seg" data-field="field" aria-labelledby="lField">
+      <button type="button" data-v="fashion">Fashion</button><button type="button" data-v="design">Design</button><button type="button" data-v="art and photography">Art &amp; photography</button>
+      <button type="button" data-v="tech">Tech</button><button type="button" data-v="business and marketing">Business &amp; marketing</button><button type="button" data-v="other">Something else</button></div></div>
+    <div class="field"><span class="qlabel" id="lStatus">Are you studying or working?</span><div class="seg" data-field="status" aria-labelledby="lStatus">
+      <button type="button" data-v="studying">Studying</button><button type="button" data-v="working">Working</button><button type="button" data-v="both">Both</button></div></div>
+    <div class="field"><span class="qlabel" id="lUse">How often do you use AI tools?</span><div class="seg" data-field="aiUse" aria-labelledby="lUse">
+      <button type="button" data-v="never">Never</button><button type="button" data-v="a few times">A few times</button><button type="button" data-v="monthly">Monthly</button><button type="button" data-v="weekly">Weekly</button><button type="button" data-v="daily">Daily</button></div></div>
+    <div class="scale"><div class="qhead"><span class="qlabel" id="lFeel">AI in fashion and art: how do you feel?</span></div>
+      <div class="dots5" data-field="aiFeel" aria-labelledby="lFeel"><button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5</button></div>
+      <div class="qhead"><span class="ends">1 · against it</span><span class="ends">all for it · 5</span></div></div>
+    <label class="check"><input type="checkbox" id="pConsent" required><span>I'm 18 or older and agree that my answers and email are saved for this student research project. They are only used for the project and deleted when it ends. *</span></label>
+    <label class="check"><input type="checkbox" id="pUpdates"><span>Email me the findings when the project is done.</span></label>
+    <p class="fine" id="pContact" hidden></p>
+    <p class="status err" id="pErr" role="alert"></p>
+    <div class="actions"><button class="btn primary" type="button" id="passGo">Enter the salon</button><button class="btn ghost" type="button" id="passBack">Back</button></div>
+  </div>
+</section>
+
+<!-- rating sheet -->
+<aside class="sheet closed" id="sheet" aria-labelledby="sTitle">
+  <div class="sheet-top">
+    <button class="iconbtn" id="sPrev" aria-label="Previous piece">‹</button>
+    <div class="sheet-id"><span class="eyebrow" id="sEyebrow">No. 01</span><h2 id="sTitle">Title</h2></div>
+    <button class="iconbtn" id="sNext" aria-label="Next piece">›</button>
+    <button class="iconbtn" id="sClose" aria-label="Back to the room">×</button>
+  </div>
+  <div class="sheet-tools">
+    <button class="btn small" id="sLook" aria-pressed="false">Look closer</button>
+    <span class="fine" id="sHint">Pinch or scroll on the art to zoom</span>
+  </div>
+  <div class="sheet-body" id="sBody"></div>
+</aside>
+
+<!-- all pieces -->
+<section class="overlay" id="index" hidden aria-labelledby="iTitle">
+  <div class="card wide">
+    <div class="actions" style="justify-content:space-between"><h2 id="iTitle" style="font-size:28px">All pieces</h2><button class="iconbtn" id="iClose" aria-label="Close">×</button></div>
+    <div class="thumbs" id="iThumbs"></div>
+    <div class="actions" id="iActions"></div>
+  </div>
+</section>
+
+<!-- finish -->
+<section class="overlay" id="final" hidden aria-labelledby="fTitle">
+  <div class="card wide" id="fCard"></div>
+</section>
+
+<!-- curator -->
+<section class="overlay curator" id="curator" hidden aria-labelledby="cTitle">
+  <div class="cur-wrap" id="cWrap"></div>
+</section>
+
+<!-- inside the VR glasses -->
+<section class="vrhud" id="vr360" hidden aria-label="360 degree view">
+  <div class="brand"><b class="glitch">Glasses on</b><span id="vrTitle">No. 01</span></div>
+  <div class="vr-bottom"><span class="hintline">Drag to look around · pinch or scroll to zoom</span>
+    <div class="actions" style="justify-content:center"><button class="btn primary" id="vrDone">Take off the glasses · rate it</button><button class="btn" id="vrHeadset" hidden>Open in headset</button></div></div>
+</section>
+<!-- the 3D piece: turn it around, or stand it in your own room -->
+<section class="view3d" id="view3d" hidden aria-labelledby="v3Title">
+  <div class="view3d-top"><div class="sheet-id"><span class="eyebrow" id="v3No">No. 01</span><h2 id="v3Title">Title</h2></div><button class="iconbtn" id="v3Close" aria-label="Close">×</button></div>
+  <div id="v3Stage" style="flex:1;min-height:0;position:relative"></div>
+  <div class="view3d-foot"><span class="hintline" id="v3Hint">Drag to turn it · pinch or scroll to zoom</span></div>
+</section>
+<div class="fade" id="fade"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+/* ---------------- config + helpers ---------------- */
+const CFG = Object.assign({SHEET_URL:'',ROOM_NAME:'The Pink Salon',HOUSE_NAME:'The Barbie House',PROJECT_LINE:'',CONTACT_EMAIL:''}, window.SALON_CONFIG || {});
+const SHEET_URL = String(CFG.SHEET_URL || '').trim();
+const LIVE = /^https:\/\/script\.google(usercontent)?\.com\//.test(SHEET_URL);
+const SLOTS = 12;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SIDE_MQ = matchMedia('(min-width:820px),(orientation:landscape) and (min-width:640px)');
+const MAKER = {
+  human:{who:'A human', short:'Human', cls:'c-human', hex:'#ffb86b'},
+  ai:{who:'AI', short:'AI', cls:'c-ai', hex:'#7fd6ff'},
+  both:{who:'Human + AI', short:'Both', cls:'c-both', hex:'#c9a2ff'}
+};
+const WALL = i => i < 4 ? 'left wall' : i < 8 ? 'back wall' : 'right wall';
+const num = i => 'No. ' + String(i + 1).padStart(2, '0');
+function lsGet(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } }
+function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } }
+function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2))).replace(/-/g,'').slice(0,12); }
+let toastT;
+function toast(msg, ms = 2600){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); }
+function flagMissing(els){
+  els = els.filter(Boolean); els.forEach(el => { el.classList.remove('need'); void el.offsetWidth; el.classList.add('need'); });
+  if (els[0]) els[0].scrollIntoView({behavior:REDUCED ? 'auto' : 'smooth', block:'center'});
+}
+function unseal(id, seal){
+  try { const bin = atob(seal); const key = new TextEncoder().encode(String(id)); const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i) ^ key[i % key.length];
+    return JSON.parse(new TextDecoder().decode(out)); } catch(e){ return null; }
+}
+
+/* small IndexedDB key-value store, used by preview mode only */
+const idb = (() => {
+  const mem = new Map(); let dbp = null;
+  function open(){ if (!dbp) dbp = new Promise((res, rej) => { try { const r = indexedDB.open('pink-salon-preview', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch(e){ rej(e); } }); return dbp; }
+  async function get(k){ if (mem.has(k)) return mem.get(k); try { const db = await open(); const v = await new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); if (v !== undefined) mem.set(k, v); return v; } catch(e){ return undefined; } }
+  async function set(k, v){ mem.set(k, v); try { const db = await open(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } catch(e){} }
+  async function del(k){ mem.delete(k); try { const db = await open(); await new Promise(res => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').delete(k); tx.oncomplete = res; tx.onerror = res; }); } catch(e){} }
+  return {get, set, del};
+})();
+
+/* ---------------- sample art (preview mode) ---------------- */
+const SAMPLE_NAMES = ['Satin Study','Glass Heel','Sunday Tulle','Pearl Static','Blush Signal','Velvet Loop','Dream Pleat','Cherry Chrome','Soft Armour','Ribbon Weather','Doll Logic','Fuchsia Hour'];
+const SAMPLE_MAKERS = ['human','ai','both','ai','human','both','both','human','ai','human','ai','both'];
+const SAMPLE_ASPECT = [0.75,1,0.8,1.33,0.75,0.8,2,0.7,1.25,0.75,1,0.8];
+const SAMPLE_VR = 6;
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function sampleArtworks(){
+  return SAMPLE_NAMES.map((n, i) => { const vr = i === SAMPLE_VR; const a = SAMPLE_ASPECT[i]; const h = vr ? 1024 : 1000, w = vr ? 2048 : Math.round(h * a);
+    return {id:'sample' + String(i + 1).padStart(2, '0'), order:i + 1, title:'Sample · ' + (vr ? 'Dream Float' : n), w, h, updated:0, sample:true, kind:vr ? 'vr' : 'image',
+      reveal:{maker:SAMPLE_MAKERS[i], credit:'Placeholder', how:'Sample piece. Swap in a real artwork in Curator mode.', time:''}}; });
+}
+const sampleCache = new Map();
+function samplePanorama(a){
+  const c = document.createElement('canvas'); c.width = 2048; c.height = 1024; const g = c.getContext('2d'), r = rng(4242), Wp = c.width, Hz = c.height / 2;
+  const sky = g.createLinearGradient(0, 0, 0, Hz); sky.addColorStop(0, '#24163f'); sky.addColorStop(.55, '#8a4fb0'); sky.addColorStop(1, '#ffb3d1'); g.fillStyle = sky; g.fillRect(0, 0, Wp, Hz);
+  for (let k = 0; k < 400; k++){ g.globalAlpha = .4 + r() * .6; g.fillStyle = '#fff'; g.fillRect(r() * Wp, r() * Hz * .6, 2, 2); } g.globalAlpha = 1;
+  const sun = g.createRadialGradient(1024, Hz - 90, 10, 1024, Hz - 90, 260); sun.addColorStop(0, 'rgba(255,246,214,1)'); sun.addColorStop(.25, 'rgba(255,200,220,.7)'); sun.addColorStop(1, 'rgba(255,200,220,0)'); g.fillStyle = sun; g.fillRect(0, 0, Wp, Hz);
+  for (let k = 0; k < 18; k++){ const x = r() * Wp, y = Hz - 60 - r() * 200, w = 80 + r() * 160; g.fillStyle = 'rgba(255,240,248,.75)'; g.beginPath(); g.ellipse(x, y, w, w * .28, 0, 0, Math.PI * 2); g.ellipse(x + w * .5, y - 12, w * .6, w * .25, 0, 0, Math.PI * 2); g.fill(); }
+  const gr = g.createLinearGradient(0, Hz, 0, c.height); gr.addColorStop(0, '#ffd9ea'); gr.addColorStop(1, '#c93a78'); g.fillStyle = gr; g.fillRect(0, Hz, Wp, Hz);
+  let y = Hz, row = 0; while (y < c.height){ const hgt = 6 + row * row * 1.6; for (let x = 0; x < Wp; x += 64){ if ((x / 64 + row) % 2) { g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x, y, 64, hgt); } } y += hgt; row++; }
+  const things = ['door', 'heart', 'clock', 'door', 'heart', 'clock', 'heart', 'door'];
+  things.forEach((t, k) => { const x = (k + .5) * Wp / things.length, yy = Hz - 40 - (k % 3) * 70; g.save(); g.translate(x, yy); g.rotate((r() - .5) * .6);
+    if (t === 'door'){ g.fillStyle = '#e0558f'; g.fillRect(-28, -60, 56, 110); g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(16, 0, 5, 0, 7); g.fill(); }
+    if (t === 'heart'){ g.fillStyle = '#ff4f8f'; g.beginPath(); g.moveTo(0, 30); g.bezierCurveTo(-60, -10, -30, -55, 0, -25); g.bezierCurveTo(30, -55, 60, -10, 0, 30); g.fill(); }
+    if (t === 'clock'){ g.fillStyle = '#fff3c4'; g.beginPath(); g.arc(0, 0, 36, 0, 7); g.fill(); g.strokeStyle = '#2a1b2e'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -24); g.moveTo(0, 0); g.lineTo(17, 6); g.stroke(); }
+    g.restore(); });
+  g.fillStyle = 'rgba(20,16,22,.75)'; g.font = '600 26px "IBM Plex Mono", monospace';
+  for (let k = 0; k < 4; k++){ const x = k * Wp / 4 + 120; g.fillRect(x - 14, Hz + 60, 250, 44); g.fillStyle = '#fff'; g.fillText('SAMPLE 360°', x, Hz + 92); g.fillStyle = 'rgba(20,16,22,.75)'; }
+  return c.toDataURL('image/jpeg', .86);
+}
+function sampleImage(a){
+  if (sampleCache.has(a.id)) return sampleCache.get(a.id);
+  if (a.kind === 'vr'){ const u = samplePanorama(a); sampleCache.set(a.id, u); return u; }
+  const i = parseInt(a.id.slice(-2), 10) || 1, r = rng(i * 977 + 13);
+  const c = document.createElement('canvas'); c.width = a.w; c.height = a.h; const g = c.getContext('2d');
+  const pals = [['#ff7eb6','#ffd6e8','#7a1f4f','#fff3c4'],['#2b1b3d','#ff5a8f','#ffc2d9','#7fd6ff'],['#f6c9d8','#e0558f','#3b0f2a','#ffffff'],['#ffe3ef','#c93a78','#ffb86b','#2a1b2e'],
+    ['#1d2a4a','#ff8ac1','#f7eef2','#c9a2ff'],['#fff0f5','#ff3d7f','#ffd1a8','#3a1430']];
+  const p = pals[i % pals.length];
+  const bg = g.createLinearGradient(0, 0, c.width * r(), c.height); bg.addColorStop(0, p[0]); bg.addColorStop(1, p[1]); g.fillStyle = bg; g.fillRect(0, 0, c.width, c.height);
+  for (let k = 0; k < 6; k++){ g.save(); g.globalAlpha = .35 + r() * .5; g.fillStyle = p[(k + 2) % 4]; g.translate(c.width * r(), c.height * r()); g.rotate(r() * Math.PI);
+    if (r() < .5){ g.beginPath(); g.ellipse(0, 0, c.width * (.1 + r() * .3), c.height * (.05 + r() * .25), 0, 0, Math.PI * 2); g.fill(); } else { g.fillRect(-c.width * .2, -c.height * .04, c.width * (.2 + r() * .4), c.height * (.04 + r() * .12)); } g.restore(); }
+  g.lineCap = 'round';
+  for (let k = 0; k < 4; k++){ g.strokeStyle = p[(k + 3) % 4]; g.globalAlpha = .7; g.lineWidth = 8 + r() * 40; g.beginPath(); g.moveTo(-50, c.height * r());
+    g.bezierCurveTo(c.width * r(), c.height * r(), c.width * r(), c.height * r(), c.width + 50, c.height * r()); g.stroke(); }
+  // dress silhouette
+  g.globalAlpha = .85; g.fillStyle = p[2]; const cx = c.width * (.35 + r() * .3), top = c.height * .22, waist = c.height * .45, hem = c.height * .82, sw = c.width * (.13 + r() * .05);
+  g.beginPath(); g.moveTo(cx - sw * .55, top); g.lineTo(cx + sw * .55, top); g.lineTo(cx + sw * .35, waist); g.quadraticCurveTo(cx + sw * 2.4, hem * .95, cx + sw * 1.9, hem); g.lineTo(cx - sw * 1.9, hem); g.quadraticCurveTo(cx - sw * 2.4, hem * .95, cx - sw * .35, waist); g.closePath(); g.fill();
+  for (let k = 0; k < 2600; k++){ g.globalAlpha = .08 + r() * .1; g.fillStyle = r() < .5 ? '#ffffff' : '#000000'; g.fillRect(r() * c.width, r() * c.height, 2 + r() * 3, 2 + r() * 3); }
+  g.globalAlpha = 1; g.fillStyle = 'rgba(20,16,22,.78)'; g.fillRect(24, c.height - 70, 190, 44); g.fillStyle = '#fff'; g.font = '600 22px "IBM Plex Mono", monospace'; g.fillText('SAMPLE ' + String(i).padStart(2, '0'), 40, c.height - 40);
+  const url = c.toDataURL('image/jpeg', .85); sampleCache.set(a.id, url); return url;
+}
+
+/* ---------------- two pieces built into the page, so they need no upload: they always hang last ---------------- */
+const BUILT_IN = [
+  {id:'glitch-cover-story', order:901, title:'Cover Story', kind:'vr', w:4096, h:2048, updated:1, builtin:true,
+    reveal:{maker:'ai', credit:'Claude (AI), for Glitch Magazine', how:'A 360° magazine world drawn entirely with code from a short brief. No photos or stock images.', time:''}},
+  {id:'glitch-soft-signal', order:902, title:'Soft Signal', kind:'3d', w:800, h:1000, updated:1, builtin:true,
+    reveal:{maker:'ai', credit:'Claude (AI), for Glitch Magazine', how:'A gown sliced like a corrupted file, modelled entirely with code from a short brief.', time:''}}
+];
+const withBuiltIn = list => [...list.sort((x, y) => (x.order || 0) - (y.order || 0)).slice(0, SLOTS - BUILT_IN.length), ...BUILT_IN];
+const COVER_LINES = ['WHO MADE THIS?', 'WHAT IS IT WORTH?', 'LOOK TWICE'];
+function glitchWord(g, text, x, y){ const k = parseInt(g.font, 10) * .022 || 3; g.fillStyle = '#ff5a4e'; g.fillText(text, x + k, y); g.fillStyle = '#7fd6ff'; g.fillText(text, x - k, y); g.fillStyle = '#fff6fa'; g.fillText(text, x, y); }
+function coverPanorama(){
+  const c = document.createElement('canvas'); c.width = 4096; c.height = 2048; const g = c.getContext('2d'), Wp = c.width, Hz = c.height / 2, r = rng(1207);
+  const sky = g.createLinearGradient(0, 0, 0, Hz); sky.addColorStop(0, '#120917'); sky.addColorStop(.6, '#5b1650'); sky.addColorStop(1, '#ff5fa3'); g.fillStyle = sky; g.fillRect(0, 0, Wp, Hz);
+  const gr = g.createLinearGradient(0, Hz, 0, c.height); gr.addColorStop(0, '#ffb3d1'); gr.addColorStop(.35, '#a82c62'); gr.addColorStop(1, '#1e1820'); g.fillStyle = gr; g.fillRect(0, Hz, Wp, Hz);
+  for (let k = 0; k < 700; k++){ g.globalAlpha = .3 + r() * .7; g.fillStyle = r() < .2 ? '#7fd6ff' : '#fff'; g.fillRect(r() * Wp, r() * Hz * .7, 3, 3); } g.globalAlpha = 1;
+  // the floor: lines that meet under your feet and rings around you, a magazine grid laid flat
+  g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 3; for (let x = 0; x < Wp; x += Wp / 48){ g.beginPath(); g.moveTo(x, Hz); g.lineTo(x, c.height); g.stroke(); }
+  for (let k = 1; k < 16; k++){ const y = Hz + Hz * (1 - Math.pow(.8, k)); g.beginPath(); g.moveTo(0, y); g.lineTo(Wp, y); g.stroke(); }
+  // data bars torn across the sky
+  for (let k = 0; k < 90; k++){ g.globalAlpha = .25 + r() * .55; g.fillStyle = ['#ff5a4e', '#7fd6ff', '#e0558f', '#c9a2ff'][k % 4]; g.fillRect(r() * Wp, Hz * (.25 + r() * .6), 60 + r() * 420, 4 + r() * 22); } g.globalAlpha = 1;
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '800 300px "Bricolage Grotesque", Arial, sans-serif';
+  for (let k = 0; k < 3; k++) glitchWord(g, 'GLITCH', (k + .5) * Wp / 3, Hz - 190);
+  for (let k = 0; k < 16; k++){ const y = Hz - 370 + r() * 360, h = 5 + r() * 16, dx = (r() - .5) * 60; g.drawImage(c, 0, y, Wp, h, dx, y, Wp, h); }   // slip strips sideways, like a file losing data
+  g.font = '600 56px "IBM Plex Mono", monospace'; g.fillStyle = '#fff6fa'; const line = COVER_LINES.join('  ·  ');
+  for (let k = 0; k < 3; k++) g.fillText(line, (k + .5) * Wp / 3, Hz - 34);
+  return c.toDataURL('image/jpeg', .88);
+}
+function coverArt(g, w, h, i){
+  const pals = [['#ff5fa3', '#2a0f2a', '#fff6fa'], ['#141016', '#ff5fa3', '#7fd6ff'], ['#7fd6ff', '#5b1650', '#fff6fa'], ['#fff0f6', '#e0558f', '#141016']]; const [bg, ink, hi] = pals[i % pals.length], r = rng(40 + i);
+  g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  for (let k = 0; k < 16; k++){ g.globalAlpha = .4; g.fillStyle = k % 2 ? hi : ink; g.fillRect(r() * w, h * (.28 + r() * .6), 40 + r() * 260, 4 + r() * 16); } g.globalAlpha = 1;
+  const cx = w * .5, top = h * .3, sw = w * .1; g.fillStyle = ink; g.beginPath(); g.moveTo(cx - sw * .7, top); g.lineTo(cx + sw * .7, top); g.lineTo(cx + sw * .4, h * .52); g.quadraticCurveTo(cx + sw * 3.2, h * .84, cx + sw * 2.6, h * .92); g.lineTo(cx - sw * 2.6, h * .92); g.quadraticCurveTo(cx - sw * 3.2, h * .84, cx - sw * .4, h * .52); g.closePath(); g.fill();
+  g.fillStyle = hi; g.beginPath(); g.arc(cx, top - h * .05, h * .036, 0, 7); g.fill();
+  for (let k = 0; k < 12; k++){ const y = top + r() * h * .6, b = 4 + r() * 16; g.drawImage(g.canvas, 0, y, w, b, (r() - .5) * 60, y, w, b); }
+  g.textAlign = 'center'; g.textBaseline = 'alphabetic'; let size = 170; g.font = `800 ${size}px "Bricolage Grotesque", Arial, sans-serif`; while (g.measureText('GLITCH').width > w - 50){ size -= 4; g.font = `800 ${size}px "Bricolage Grotesque", Arial, sans-serif`; }
+  glitchWord(g, 'GLITCH', w / 2, size * .98);
+  g.font = '600 26px "IBM Plex Mono", monospace'; g.fillStyle = hi; g.fillText(COVER_LINES[i % COVER_LINES.length], w / 2, h - 34); g.textAlign = 'left'; g.fillText('ISSUE 1', 24, size + 30);
+}
+/* a gown sliced like a corrupted file. Plain boxy materials on purpose: the same model has to survive the trip into AR */
+function makeSculpture(){
+  const root = new THREE.Group(), r = rng(77); root.name = 'Soft Signal';
+  const add = (geo, mat, y, x = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, 0); root.add(m); return m; };
+  const mat = (color, o = {}) => new THREE.MeshStandardMaterial({color, roughness:.28, metalness:.25, ...o});
+  add(new THREE.CylinderGeometry(.46, .5, .22, 64), mat('#fff0f6', {metalness:.05}), .11);
+  add(new THREE.TorusGeometry(.46, .012, 10, 72), mat('#e2b357', {metalness:.8}), .22).rotation.x = Math.PI / 2;
+  const prof = [[0, .62], [.3, .5], [.56, .2], [.64, .135], [.78, .2], [.88, .23], [.95, .1], [1, .055]];
+  const rad = t => { for (let k = 1; k < prof.length; k++) if (t <= prof[k][0]){ const [a, ra] = prof[k - 1], [b, rb] = prof[k], u = (t - a) / (b - a); return ra + (rb - ra) * u * u * (3 - 2 * u); } return .055; };
+  const mats = {pink:mat('#ff4f9a'), hot:mat('#e0558f'), cyan:mat('#7fd6ff'), coral:mat('#ff5a4e'), pearl:mat('#fff6fa', {metalness:.05})};
+  const n = 36, tall = 1.34, h = tall / n;
+  for (let k = 0; k < n; k++){ const t = k / n, odd = r(); const m = odd < .1 ? mats.cyan : odd < .18 ? mats.coral : odd < .26 ? mats.pearl : k % 2 ? mats.pink : mats.hot;
+    const slip = (Math.sin(k * 1.7) > .55 ? 1 : .12) * (r() - .5) * .22;
+    add(new THREE.CylinderGeometry(rad(t + 1 / n), rad(t), h * .8, 64), m, .24 + (k + .5) * h, slip); }
+  add(new THREE.SphereGeometry(.1, 32, 24), mats.pearl, 1.7);
+  add(new THREE.TorusGeometry(.17, .012, 12, 72), mats.cyan, 1.74).rotation.x = Math.PI / 2 - .35;
+  return root;
+}
+function sculpturePoster(){
+  const w = 800, h = 1000, r = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true}); r.setSize(w, h, false); r.outputColorSpace = THREE.SRGBColorSpace;
+  const sc = new THREE.Scene(); sc.background = new THREE.Color('#2a0f2a'); sc.add(makeSculpture(), new THREE.HemisphereLight('#fff4f8', '#a82c62', 2.2));
+  const sun = new THREE.DirectionalLight('#ffffff', 2.2); sun.position.set(2, 4, 3); sc.add(sun);
+  const cam = new THREE.PerspectiveCamera(30, w / h, .1, 20); cam.position.set(.5, 1.2, 4.2); cam.lookAt(0, .92, 0); r.render(sc, cam);
+  const url = r.domElement.toDataURL('image/jpeg', .9); r.dispose(); r.forceContextLoss(); return url;
+}
+async function builtInImage(a){
+  try { await Promise.race([document.fonts.load('800 120px "Bricolage Grotesque"'), new Promise(r => setTimeout(r, 1500))]); } catch(e){}
+  return a.kind === 'vr' ? coverPanorama() : sculpturePoster();
+}
+
+/* ---------------- data layer ---------------- */
+function liveApi(){
+  async function get(params){
+    const r = await fetch(SHEET_URL + (SHEET_URL.includes('?') ? '&' : '?') + new URLSearchParams(params), {redirect:'follow'});
+    const j = await r.json(); if (!j.ok) throw new Error(j.error || 'error'); return j;
+  }
+  async function post(body){
+    const r = await fetch(SHEET_URL, {method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body)});
+    const j = await r.json(); if (!j.ok) throw new Error(j.error || 'error'); return j;
+  }
+  return {
+    live:true,
+    async artworks(){ const j = await get({action:'artworks', t:Date.now()}); return (j.artworks || []).map(a => ({...a, reveal:unseal(a.id, a.seal) || {}})); },
+    async image(a){ const j = await get({action:'image', id:a.id, v:a.updated || 0}); return j.data; },
+    checkPin: pin => post({action:'checkPin', pin}),
+    stats: pin => post({action:'stats', pin}),
+    async saveArtwork(pin, artwork, image){ const j = await post({action:'saveArtwork', pin, artwork, image}); const a = j.artwork; return {...a, reveal:unseal(a.id, a.seal) || {}}; },
+    deleteArtwork: (pin, id) => post({action:'deleteArtwork', pin, id}),
+    reorder: (pin, ids) => post({action:'reorder', pin, ids}),
+    send: (kind, payload) => post({action:kind, [kind]:payload})
+  };
+}
+function demoApi(){
+  const ROWS = 'pink-salon-preview-rows';
+  async function list(){ return (await idb.get('artworks')) || sampleArtworks(); }
+  async function persist(arts){
+    for (const a of arts) if (a.sample && !(await idb.get('img:' + a.id))) await idb.set('img:' + a.id, sampleImage(a));
+    arts.forEach((a, i) => a.order = i + 1); await idb.set('artworks', arts);
+  }
+  return {
+    live:false,
+    async artworks(){ return (await list()).map(a => ({...a, reveal:{...a.reveal}})); },
+    async image(a){ return (await idb.get('img:' + a.id)) || (a.sample ? sampleImage(a) : null); },
+    async checkPin(){ return {ok:true}; },
+    async stats(){ const rows = lsGet(ROWS, {visitors:{}, ratings:{}}); const v = Object.values(rows.visitors);
+      return {ok:true, visitors:v.length, finished:v.filter(x => x.finished === 'yes').length, ratings:Object.keys(rows.ratings).length, sheetUrl:''}; },
+    async saveArtwork(pin, artwork, image){
+      const arts = await list(); let a = arts.find(x => x.id === artwork.id);
+      if (!a){ a = {id:'p' + uid().slice(0, 8)}; arts.push(a); }
+      Object.assign(a, {title:artwork.title, kind:artwork.kind === 'vr' ? 'vr' : 'image', w:artwork.w || a.w, h:artwork.h || a.h, updated:Date.now(), sample:false,
+        reveal:{maker:artwork.maker, credit:artwork.credit, how:artwork.how, time:artwork.time}});
+      if (image) await idb.set('img:' + a.id, image.data);
+      else if (!(await idb.get('img:' + a.id)) && artwork.id && artwork.id.startsWith('sample')) await idb.set('img:' + a.id, sampleImage({...a, w:a.w, h:a.h, id:artwork.id}));
+      await persist(arts); return {...a, reveal:{...a.reveal}};
+    },
+    async deleteArtwork(pin, id){ const arts = (await list()).filter(x => x.id !== id); await idb.del('img:' + id); await persist(arts); return {ok:true}; },
+    async reorder(pin, ids){ const arts = await list(); arts.sort((x, y) => ids.indexOf(x.id) - ids.indexOf(y.id)); await persist(arts); return {ok:true}; },
+    async send(kind, payload){ const rows = lsGet(ROWS, {visitors:{}, ratings:{}});
+      if (kind === 'visitor') rows.visitors[payload.visitorId] = {...(rows.visitors[payload.visitorId] || {}), ...payload};
+      else rows.ratings[payload.key] = {...(rows.ratings[payload.key] || {}), ...payload};
+      lsSet(ROWS, rows); return {ok:true}; }
+  };
+}
+const api = LIVE ? liveApi() : demoApi();
+
+/* outbox: answers are queued on the phone and re-sent until the sheet confirms them */
+const OUTBOX = 'pink-salon-outbox';
+let outbox = lsGet(OUTBOX, []), flushing = false;
+function enqueue(kind, payload){
+  const key = kind + ':' + (kind === 'visitor' ? payload.visitorId : payload.key);
+  outbox = outbox.filter(x => x.key !== key); outbox.push({key, kind, payload}); lsSet(OUTBOX, outbox); flush();
+}
+async function flush(){
+  if (flushing) return; flushing = true; renderSave();
+  try {
+    while (outbox.length){
+      const item = outbox[0];
+      try { await api.send(item.kind, item.payload); outbox = outbox.filter(x => x !== item); lsSet(OUTBOX, outbox); }
+      catch(e){ break; }
+    }
+  } finally { flushing = false; renderSave(); }
+}
+setInterval(flush, 20000); addEventListener('online', flush);
+function renderSave(){
+  const el = $('#saveState'); if (!LIVE){ el.textContent = state && state.profile ? 'Preview · saved on this device' : ''; return; }
+  if (!outbox.length){ el.textContent = state && state.profile ? '✓ answers saved' : ''; el.classList.remove('warn'); return; }
+  el.textContent = navigator.onLine === false ? 'Offline · will send when you’re back' : 'Saving…';
+  el.classList.toggle('warn', navigator.onLine === false);
+}
+
+/* ---------------- visitor state ---------------- */
+const STATE = 'pink-salon-visit';
+let state = lsGet(STATE, null);
+function saveState(){ lsSet(STATE, state); }
+function newVisit(profile){
+  state = {visitorId:uid(), startedAt:new Date().toISOString(), profile, answers:{}, startOffset:Math.floor(Math.random() * SLOTS), seen:0, final:null, finished:false};
+  saveState();
+}
+const ans = id => (state.answers[id] ||= {blind:{}, after:{reasons:[]}, stage:'blind'});
+
+let artworks = [];            // sorted, max 12
+const imageCache = new Map(); // id -> data url
+
+/* ---------------- 3D salon ---------------- */
+const W = 11, D = 9, H = 4.2, EYE = 1.6, ART_Y = 1.62;
+const stage = $('#stage');
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+stage.appendChild(renderer.domElement);
+const MAXTEX = Math.min(renderer.capabilities.maxTextureSize, (Math.min(innerWidth, innerHeight) < 600 ? 1024 : 1600));
+const VRTEX = Math.min(renderer.capabilities.maxTextureSize, 4096);   // 360° images need more pixels
+const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#f3c1d3');
+let dirty = true; const markDirty = () => { dirty = true; };
+const camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, .05, 60);
+function baseFov(){ return innerWidth / innerHeight < .8 ? 68 : 55; }
+camera.fov = baseFov();
+
+function canvasTex(w, h, draw, repeat){
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = ANISO;
+  if (repeat){ t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); }
+  return t;
+}
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({color, roughness:.6, metalness:0, ...o});
+
+// lights
+scene.add(new THREE.HemisphereLight('#fff4f8', '#d77ba0', 1.55));
+const sun = new THREE.DirectionalLight('#ffffff', .9); sun.position.set(2.5, 6, 4); scene.add(sun);
+const chandLight = new THREE.PointLight('#ffe2c4', 14, 14, 2); chandLight.position.set(0, H - .75, 0); scene.add(chandLight);
+
+// floor: glossy pink and white checkerboard
+const floorTex = canvasTex(512, 512, (g, w, h) => {
+  const s = w / 2; for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++){ g.fillStyle = (x + y) % 2 ? '#f2a6c3' : '#fff3f8'; g.fillRect(x * s, y * s, s, s); }
+  const r = rng(5); g.globalAlpha = .06; for (let i = 0; i < 1400; i++){ g.fillStyle = r() < .5 ? '#ffffff' : '#c96b92'; g.fillRect(r() * w, r() * h, 2, 2); }
+  g.globalAlpha = .25; g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.strokeRect(0, 0, w, h); g.beginPath(); g.moveTo(s, 0); g.lineTo(s, h); g.moveTo(0, s); g.lineTo(w, s); g.stroke();
+}, [W / 1.8, D / 1.8]);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), std('#ffffff', {map:floorTex, roughness:.32}));
+floor.rotation.x = -Math.PI / 2; floor.userData.floor = true; scene.add(floor);
+// rug + ottoman
+const rugTex = canvasTex(512, 512, (g, w) => { const gr = g.createRadialGradient(w/2, w/2, 10, w/2, w/2, w/2); gr.addColorStop(0, '#fff7fb'); gr.addColorStop(.86, '#ffe1ee'); gr.addColorStop(.9, '#e0558f'); gr.addColorStop(.94, '#ffe1ee'); gr.addColorStop(1, 'rgba(255,225,238,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, w); const r = rng(9); g.globalAlpha = .12; for (let i = 0; i < 3000; i++){ const a = r() * Math.PI * 2, d = r() * w * .44; g.fillStyle = r() < .5 ? '#fff' : '#f0a7c4'; g.fillRect(w/2 + Math.cos(a) * d, w/2 + Math.sin(a) * d, 2, 5); } });
+const rug = new THREE.Mesh(new THREE.CircleGeometry(2.2, 64), new THREE.MeshStandardMaterial({map:rugTex, transparent:true, roughness:1}));
+rug.rotation.x = -Math.PI / 2; rug.position.set(0, .006, -.3); rug.userData.floor = true; scene.add(rug);
+const ottoman = new THREE.Group(); ottoman.position.set(0, 0, -.3); ottoman.scale.setScalar(.82); scene.add(ottoman);
+const velvet = std('#cf3f7d', {roughness:.92});
+const pouf = new THREE.Mesh(new THREE.CylinderGeometry(.78, .72, .42, 40), velvet); pouf.position.y = .25; ottoman.add(pouf);
+const rim = new THREE.Mesh(new THREE.TorusGeometry(.76, .07, 12, 48), velvet); rim.rotation.x = Math.PI / 2; rim.position.y = .45; ottoman.add(rim);
+const topCush = new THREE.Mesh(new THREE.CylinderGeometry(.74, .76, .06, 40), std('#e0558f', {roughness:.9})); topCush.position.y = .47; ottoman.add(topCush);
+const tuftMat = std('#a82c62', {roughness:.7});
+for (let i = 0; i < 8; i++){ const a = i / 8 * Math.PI * 2; const b = new THREE.Mesh(new THREE.SphereGeometry(.03, 10, 8), tuftMat); b.position.set(Math.cos(a) * .42, .505, Math.sin(a) * .42); ottoman.add(b); }
+const legMat = std('#d8a84e', {metalness:.7, roughness:.3});
+for (let i = 0; i < 4; i++){ const a = i / 4 * Math.PI * 2 + .78; const l = new THREE.Mesh(new THREE.CylinderGeometry(.03, .02, .06, 10), legMat); l.position.set(Math.cos(a) * .55, .03, Math.sin(a) * .55); ottoman.add(l); }
+
+// walls: Regency stripes, hot pink dado panels, white mouldings
+const stripeTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#f8d4e2'; g.fillRect(0, 0, w, h); g.fillStyle = '#f3c3d6'; g.fillRect(w * .5, 0, w * .5, h); g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(w * .5 - 3, 0, 3, h); g.fillRect(w - 3, 0, 3, h); });
+const dadoTex = canvasTex(512, 256, (g, w, h) => { g.fillStyle = '#e46b9e'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 6; g.strokeRect(40, 40, w - 80, h - 80); g.strokeStyle = 'rgba(120,20,60,.25)'; g.lineWidth = 3; g.strokeRect(50, 50, w - 100, h - 100); });
+const white = std('#fff5f9', {roughness:.35});
+function wall(len, x, z, ry){
+  const grp = new THREE.Group(); grp.position.set(x, 0, z); grp.rotation.y = ry; scene.add(grp);
+  const t = stripeTex.clone(); t.needsUpdate = true; t.repeat.set(len / .55, 1);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(len, H), std('#ffffff', {map:t, roughness:.85})); m.position.y = H / 2; grp.add(m);
+  const dt = dadoTex.clone(); dt.needsUpdate = true; dt.repeat.set(len / 1.4, 1);
+  const dado = new THREE.Mesh(new THREE.BoxGeometry(len, .72, .03), std('#ffffff', {map:dt, roughness:.5})); dado.position.set(0, .36, .015); grp.add(dado);
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(len, .06, .06), white); rail.position.set(0, .73, .03); grp.add(rail);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(len, .14, .05), white); base.position.set(0, .07, .04); grp.add(base);
+  const crown = new THREE.Mesh(new THREE.BoxGeometry(len, .18, .14), white); crown.position.set(0, H - .09, .07); grp.add(crown);
+  return grp;
+}
+wall(W, 0, -D / 2, 0);              // back
+const front = wall(W, 0, D / 2, Math.PI); // entrance
+wall(D, -W / 2, 0, Math.PI / 2);    // left
+wall(D, W / 2, 0, -Math.PI / 2);    // right
+const ceil = new THREE.Mesh(new THREE.PlaneGeometry(W, D), std('#fde9f1', {roughness:.95})); ceil.rotation.x = Math.PI / 2; ceil.position.y = H; scene.add(ceil);
+const rose = new THREE.Mesh(new THREE.TorusGeometry(.7, .05, 10, 48), white); rose.rotation.x = Math.PI / 2; rose.position.set(0, H - .03, 0); scene.add(rose);
+// entrance door
+{ const door = new THREE.Group(); door.position.set(0, 0, .02); front.add(door);
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.5, .05), std('#e0558f', {roughness:.4})); panel.position.y = 1.25; door.add(panel);
+  [[-.72, 1.3, .12, 2.6], [.72, 1.3, .12, 2.6], [0, 2.62, 1.56, .14]].forEach(([x, y, w, h]) => { const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, .1), white); f.position.set(x, y, .03); door.add(f); });
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(.05, 14, 10), legMat); knob.position.set(.45, 1.15, .08); door.add(knob);
+  const inset = new THREE.Mesh(new THREE.BoxGeometry(.8, 1.0, .02), std('#f088b5', {roughness:.4})); inset.position.set(0, 1.75, .035); door.add(inset);
+  const inset2 = inset.clone(); inset2.position.y = .65; door.add(inset2); }
+// chandelier
+const chand = new THREE.Group(); chand.position.set(0, H, 0); scene.add(chand);
+{ const gold = std('#e2b357', {metalness:.75, roughness:.28, emissive:'#5a3a08', emissiveIntensity:.25});
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .5, 8), gold); rod.position.y = -.25; chand.add(rod);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(.5, .025, 10, 48), gold); ring.rotation.x = Math.PI / 2; ring.position.y = -.62; chand.add(ring);
+  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(.28, .02, 10, 36), gold); ring2.rotation.x = Math.PI / 2; ring2.position.y = -.8; chand.add(ring2);
+  const bulb = new THREE.MeshBasicMaterial({color:'#fff3dc'});
+  const crystal = new THREE.MeshStandardMaterial({color:'#ffeaf3', roughness:.08, metalness:.1, emissive:'#ff9cc6', emissiveIntensity:.35});
+  for (let i = 0; i < 10; i++){ const a = i / 10 * Math.PI * 2;
+    const b = new THREE.Mesh(new THREE.SphereGeometry(.045, 12, 10), bulb); b.position.set(Math.cos(a) * .5, -.55, Math.sin(a) * .5); chand.add(b);
+    const c = new THREE.Mesh(new THREE.OctahedronGeometry(.05), crystal); c.scale.y = 1.8; c.position.set(Math.cos(a + .3) * .5, -.75, Math.sin(a + .3) * .5); chand.add(c);
+    if (i % 2 === 0){ const c2 = c.clone(); c2.position.set(Math.cos(a) * .28, -.92, Math.sin(a) * .28); chand.add(c2); } }
+  const drop = new THREE.Mesh(new THREE.OctahedronGeometry(.08), crystal); drop.scale.y = 2; drop.position.y = -1.05; chand.add(drop); }
+// neon sign above the back wall
+let neon;
+async function makeNeon(){
+  try { await Promise.race([document.fonts.load('800 120px "Bricolage Grotesque"'), new Promise(r => setTimeout(r, 1500))]); } catch(e){}
+  const tex = canvasTex(1024, 256, (g, w, h) => { g.textAlign = 'center'; g.textBaseline = 'middle';
+    let size = 132; g.font = `800 ${size}px "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif`; while (g.measureText(CFG.ROOM_NAME).width > w - 60 && size > 40){ size -= 6; g.font = `800 ${size}px "Bricolage Grotesque", Arial, sans-serif`; }
+    for (const [blur, col] of [[38, '#ff2f86'], [18, '#ff5fa3'], [6, '#ffd2e6']]){ g.shadowColor = col; g.shadowBlur = blur; g.fillStyle = blur > 10 ? '#ff7fb6' : '#fff6fa'; g.fillText(CFG.ROOM_NAME, w / 2, h / 2 + 6); } });
+  markDirty(); if (neon){ neon.material.map.dispose(); neon.material.map = tex; neon.material.needsUpdate = true; return; }
+  neon = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.15), new THREE.MeshBasicMaterial({map:tex, transparent:true, toneMapped:false, depthWrite:false}));
+  neon.position.set(0, 3.32, -D / 2 + .03); scene.add(neon);
+}
+makeNeon();
+
+/* frames */
+const WALL_SLOTS = [];
+[3.15, 1.05, -1.05, -3.15].forEach(z => WALL_SLOTS.push({pos:[-W / 2 + .005, ART_Y, z], ry:Math.PI / 2}));
+[-3.9, -1.3, 1.3, 3.9].forEach(x => WALL_SLOTS.push({pos:[x, ART_Y, -D / 2 + .005], ry:0}));
+[-3.15, -1.05, 1.05, 3.15].forEach(z => WALL_SLOTS.push({pos:[W / 2 - .005, ART_Y, z], ry:-Math.PI / 2}));
+const lacquer = std('#fff0f6', {roughness:.25}), goldLip = std('#e2b357', {metalness:.7, roughness:.3, emissive:'#4a2f05', emissiveIntensity:.3}), matMat = std('#fffaf7', {roughness:.9});
+const washTex = canvasTex(256, 256, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h * .12, 4, w / 2, h * .3, w * .47); gr.addColorStop(0, 'rgba(255,246,226,.95)'); gr.addColorStop(.5, 'rgba(255,236,214,.32)'); gr.addColorStop(1, 'rgba(255,236,214,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+const hangingTex = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#fbe4ee'; g.fillRect(0, 0, w, h); g.fillStyle = '#c96b92'; g.font = '500 30px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.fillText('hanging…', w / 2, h / 2); });
+const emptyTex = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#f6d6e3'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d98aaa'; g.setLineDash([14, 10]); g.lineWidth = 4; g.strokeRect(30, 30, w - 60, h - 60); g.fillStyle = '#c96b92'; g.font = '500 28px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.fillText('coming soon', w / 2, h / 2); });
+const slots = [];   // {i, group, art, plaque, center, normal, right, up, totalW, totalH, artwork}
+const hitTargets = [];
+
+function fitArt(a){ const asp = a ? clamp((a.w || 1) / (a.h || 1), .4, 2.5) : .8; const maxW = 1.25, maxH = 1.32;
+  return asp > maxW / maxH ? [maxW, maxW / asp] : [maxH * asp, maxH]; }
+function buildSlot(i, a){
+  const s = WALL_SLOTS[i]; const g = new THREE.Group(); g.position.set(...s.pos); g.rotation.y = s.ry; scene.add(g);
+  const [aw, ah] = fitArt(a); const mat = .085, fw = .07, fd = .07;
+  const tw = aw + 2 * (mat + fw), th = ah + 2 * (mat + fw);
+  const wash = new THREE.Mesh(new THREE.PlaneGeometry(tw * 1.7, th * 1.5), new THREE.MeshBasicMaterial({map:washTex, transparent:true, opacity:.5, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false}));
+  wash.position.set(0, th * .12, .004); g.add(wash);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(aw + 2 * mat, ah + 2 * mat, .02), matMat); back.position.z = .02; g.add(back);
+  const parts = [[0, (ah / 2 + mat + fw / 2), tw, fw], [0, -(ah / 2 + mat + fw / 2), tw, fw], [-(aw / 2 + mat + fw / 2), 0, fw, th - 2 * fw], [(aw / 2 + mat + fw / 2), 0, fw, th - 2 * fw]];
+  const frameMeshes = parts.map(([x, y, w, h]) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, fd), lacquer); m.position.set(x, y, fd / 2); g.add(m); return m; });
+  const lip = [[0, ah / 2 + mat, aw + 2 * mat + .02, .018], [0, -(ah / 2 + mat), aw + 2 * mat + .02, .018], [-(aw / 2 + mat), 0, .018, ah + 2 * mat], [aw / 2 + mat, 0, .018, ah + 2 * mat]];
+  lip.forEach(([x, y, w, h]) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, .03), goldLip); m.position.set(x, y, .045); g.add(m); });
+  const art = new THREE.Mesh(new THREE.PlaneGeometry(aw, ah), new THREE.MeshBasicMaterial({map:a ? hangingTex : emptyTex, toneMapped:false}));
+  art.position.z = .033; g.add(art);
+  // brass picture light
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(.022, .022, Math.min(.7, tw * .55), 12), goldLip); bar.rotation.z = Math.PI / 2; bar.position.set(0, th / 2 + .14, .16); g.add(bar);
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .16, 6), goldLip); arm.rotation.x = Math.PI / 2; arm.position.set(0, th / 2 + .14, .08); g.add(arm);
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(.66, tw * .52), .012), new THREE.MeshBasicMaterial({color:'#fff7df'})); glow.rotation.x = Math.PI / 2; glow.position.set(0, th / 2 + .118, .16); g.add(glow);
+  // plaque
+  const pc = document.createElement('canvas'); pc.width = 512; pc.height = 168; const ptex = new THREE.CanvasTexture(pc); ptex.colorSpace = THREE.SRGBColorSpace; ptex.anisotropy = ANISO;
+  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(.4, .13125), new THREE.MeshBasicMaterial({map:ptex, toneMapped:false}));
+  plaque.position.set(tw / 2 + .25, -th / 2 + .1, .012); g.add(plaque);   // museum label, bottom right of the frame
+  g.updateMatrixWorld(true);
+  const q = g.getWorldQuaternion(new THREE.Quaternion());
+  const slot = {i, a, group:g, art, plaque, pc, ptex, totalW:tw, totalH:th, artW:aw, artH:ah,
+    center:art.getWorldPosition(new THREE.Vector3()), normal:new THREE.Vector3(0, 0, 1).applyQuaternion(q),
+    right:new THREE.Vector3(1, 0, 0).applyQuaternion(q), up:new THREE.Vector3(0, 1, 0)};
+  [art, back, ...frameMeshes].forEach(m => { m.userData.slot = i; if (a) hitTargets.push(m); });
+  if (a && a.kind === 'vr'){   // the glasses stand, on the floor beside the frame
+    const st = vrStand(); st.position.set(tw / 2 + .35, -ART_Y, .75); st.rotation.y = -.35; g.add(st); g.updateMatrixWorld(true);
+    slot.stand = st; slot.standPos = st.getWorldPosition(new THREE.Vector3());
+    st.traverse(m => { if (m.isMesh){ m.userData.slot = i; m.userData.vr = true; hitTargets.push(m); } });
+    OBST.push({x:slot.standPos.x, z:slot.standPos.z, r:.38});
+  }
+  if (a && a.kind === '3d'){   // the sculpture itself stands on the floor beside its frame
+    const st = makeSculpture(); st.scale.setScalar(.85); st.position.set(tw / 2 + .35, -ART_Y, .75); g.add(st); g.updateMatrixWorld(true);
+    const p = st.getWorldPosition(new THREE.Vector3()); st.traverse(m => { if (m.isMesh){ m.userData.slot = i; hitTargets.push(m); } });
+    OBST.push({x:p.x, z:p.z, r:.5});
+  }
+  slots[i] = slot; drawPlaque(slot);
+  return slot;
+}
+function drawPlaque(s){
+  const g = s.pc.getContext('2d'), w = s.pc.width, h = s.pc.height; g.clearRect(0, 0, w, h);
+  g.fillStyle = '#fffaf7'; g.fillRect(0, 0, w, h); g.strokeStyle = '#e2b357'; g.lineWidth = 6; g.strokeRect(3, 3, w - 6, h - 6);
+  g.fillStyle = '#2a1b2e'; g.textBaseline = 'alphabetic';
+  g.font = '800 46px "Bricolage Grotesque", Arial, sans-serif'; g.fillText(num(s.i).replace('No. ', 'Nº '), 24, 62);
+  if (!s.a){ g.font = '500 24px "IBM Plex Mono", monospace'; g.fillStyle = '#8a6f7c'; g.fillText('coming soon', 24, 120); s.ptex.needsUpdate = true; return; }
+  let t = s.a.title || 'Untitled'; g.font = '500 25px "IBM Plex Mono", monospace'; while (g.measureText(t).width > w - 48 && t.length > 4) t = t.slice(0, -2); if (t !== (s.a.title || 'Untitled')) t = t.trimEnd() + '…';
+  g.fillText(t, 24, 104);
+  const st = state && state.answers[s.a.id];
+  g.font = '600 20px "IBM Plex Mono", monospace';
+  if (st && st.stage !== 'blind'){ const m = MAKER[s.a.reveal.maker] || MAKER.human; g.fillStyle = m.hex; g.beginPath(); g.arc(32, 140, 8, 0, Math.PI * 2); g.fill(); g.fillStyle = '#2a1b2e'; g.fillText('Made by ' + m.short.toLowerCase() + (st.blind.guess === s.a.reveal.maker ? ' · you got it' : ''), 48, 147); }
+  else { g.fillStyle = '#c94a83'; g.fillText(s.a.kind === 'vr' ? '360° · put on the glasses' : s.a.kind === '3d' ? '3D · tap to rate' : 'tap to rate', 24, 147); }
+  s.ptex.needsUpdate = true; markDirty();
+}
+function clearSlots(){
+  slots.forEach(s => { if (!s) return; s.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map && ![hangingTex, emptyTex, washTex].includes(o.material.map)) o.material.map.dispose(); }); scene.remove(s.group); });
+  slots.length = 0; hitTargets.length = 0; OBST.length = 1;
+}
+function loadTex(url, maxSize = MAXTEX){
+  return new Promise((res, rej) => { const img = new Image(); img.onload = () => {
+    let src = img; const big = Math.max(img.width, img.height);
+    if (big > maxSize){ const k = maxSize / big; const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); src = c; }
+    const t = new THREE.Texture(src); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = ANISO; t.minFilter = THREE.LinearMipmapLinearFilter; t.needsUpdate = true; res(t); };
+    img.onerror = rej; img.src = url; });
+}
+async function hangAll(){
+  clearSlots();
+  for (let i = 0; i < SLOTS; i++) buildSlot(i, artworks[i] || null);
+  await Promise.all(artworks.slice(0, SLOTS).map(async (a, i) => {
+    try { const url = await imageURL(a);
+      if (!url || !slots[i] || slots[i].a !== a) return; const t = await loadTex(url, a.kind === 'vr' ? VRTEX : MAXTEX); if (slots[i] && slots[i].a === a){ slots[i].art.material.map = t; slots[i].art.material.needsUpdate = true; markDirty(); } }
+    catch(e){ console.warn('image failed', a.id, e); }
+  }));
+}
+const thumbOf = a => imageCache.get(a.id + ':' + a.updated) || '';
+function toObjectURL(url){
+  if (!url || !url.startsWith('data:')) return url;
+  try { const [head, b64] = url.split(','); const mime = (head.match(/data:([^;]+)/) || [])[1] || 'image/jpeg'; const bin = atob(b64); const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return URL.createObjectURL(new Blob([u8], {type:mime})); } catch(e){ return url; }
+}
+async function imageURL(a){
+  const k = a.id + ':' + a.updated; if (imageCache.has(k)) return imageCache.get(k);
+  const u = toObjectURL(a.builtin ? await builtInImage(a) : await api.image(a)); if (u) imageCache.set(k, u); return u;
+}
+
+/* ---------------- the doll (the same jointed doll as the Barbie House) ---------------- */
+const V3 = THREE.Vector3, PI = Math.PI;
+const G = () => new THREE.Group();
+const sph = (r, a = 24, b = 16) => new THREE.SphereGeometry(r, a, b);
+const cyl = (a, b, h, s = 24) => new THREE.CylinderGeometry(a, b, h, s);
+const rbox = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+const mStd = (c, r = .7, m = 0) => new THREE.MeshStandardMaterial({color:c, roughness:r, metalness:m});
+const mGlow = (c, i = 1.5) => new THREE.MeshStandardMaterial({color:c, emissive:c, emissiveIntensity:i, roughness:.5});
+const hex = c => '#' + c.toString(16).padStart(6, '0');
+function M(geo, mat, p, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0){ const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); if (p) p.add(o); return o; }
+const S = 1.15, HIP = 1.02, THI = 0.47, SHN = 0.45, HEEL = 0.08;
+const DOLLS = [
+  {name:'Rose',  dress:0xff4fa3, hair:0xf0cc6a, skin:0xf3c9ab, eye:0x3f8fd8, lip:0xd9416f, style:'long'},
+  {name:'Sky',   dress:0x5fbff2, hair:0x3a2216, skin:0xc68a5e, eye:0x6b3e1e, lip:0xb8505a, style:'pony'},
+  {name:'Lilac', dress:0xb18cff, hair:0x17110f, skin:0x8a573a, eye:0x3a2214, lip:0x9a3d52, style:'curls'},
+  {name:'Pearl', dress:0xfff1f5, hair:0xd9623a, skin:0xf7dac6, eye:0x3e8a5a, lip:0xe0607a, style:'bob'},
+];
+const DM = {
+  skin:new THREE.MeshPhysicalMaterial({roughness:.5, sheen:.4, sheenRoughness:.6, sheenColor:new THREE.Color(0xffd0c0)}),
+  dress:new THREE.MeshPhysicalMaterial({roughness:.38, sheen:1, sheenRoughness:.35, sheenColor:new THREE.Color(0xffffff), side:THREE.DoubleSide}),
+  hair:new THREE.MeshPhysicalMaterial({roughness:.42, sheen:.8, sheenRoughness:.4, side:THREE.DoubleSide}),
+  shoe:mStd(0xe0558f, .22), white:new THREE.MeshStandardMaterial({color:0xffffff, roughness:.25}), iris:new THREE.MeshStandardMaterial({roughness:.2}),
+  pupil:new THREE.MeshBasicMaterial({color:0x0c0a0c}), shine:new THREE.MeshBasicMaterial({color:0xffffff}), lash:new THREE.MeshStandardMaterial({color:0x1a1014, roughness:.6}),
+  lip:new THREE.MeshStandardMaterial({roughness:.3}), blush:new THREE.MeshBasicMaterial({color:0xff6f8e, transparent:true, opacity:.28, depthWrite:false}),
+};
+function limbGeo(r1, r2, len, seg = 16){ const pts = [], n = 6;
+  for (let i = n; i >= 0; i--){ const a = PI / 2 + i / n * PI / 2; pts.push(new THREE.Vector2(Math.max(1e-4, r2 * Math.sin(a)), -len + r2 * Math.cos(a))); }
+  for (let i = 0; i <= n; i++){ const a = PI / 2 - i / n * PI / 2; pts.push(new THREE.Vector2(Math.max(1e-4, r1 * Math.sin(a)), r1 * Math.cos(a))); }
+  return new THREE.LatheGeometry(pts, seg); }
+const doll = new THREE.Group(); doll.visible = false; scene.add(doll);
+const body = new THREE.Group(); body.scale.setScalar(S); doll.add(body);
+const J = {};
+const joint = (n, p, x, y, z) => { const g = new THREE.Group(); g.position.set(x, y, z); p.add(g); J[n] = g; return g; };
+const Dm = (geo, mat, p, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); p.add(m); return m; };
+joint('hips', body, 0, HIP, 0); joint('spine', J.hips, 0, .04, 0); joint('chest', J.spine, 0, .44, 0); joint('head', J.chest, 0, .1, 0);
+joint('shN', J.chest, -.15, 0, 0); joint('shP', J.chest, .15, 0, 0); joint('elN', J.shN, 0, -.25, 0); joint('elP', J.shP, 0, -.25, 0);
+joint('thN', J.hips, -.08, -.02, 0); joint('thP', J.hips, .08, -.02, 0); joint('knN', J.thN, 0, -THI, 0); joint('knP', J.thP, 0, -THI, 0); joint('anN', J.knN, 0, -SHN, 0); joint('anP', J.knP, 0, -SHN, 0);
+const JK = ['hips','spine','chest','head','shN','shP','elN','elP','thN','thP','knN','knP','anN','anP'];
+const TORSO = [[0.0001,-.06],[.09,-.05],[.125,-.01],[.13,.04],[.115,.12],[.095,.2],[.1,.27],[.122,.34],[.125,.39],[.11,.44],[.07,.48],[.035,.5],[.0001,.505]];
+{ const tg = new THREE.LatheGeometry(TORSO.map(p => new THREE.Vector2(p[0], p[1])), 28); const t = Dm(tg, DM.skin, J.spine); t.scale.z = .72;
+  const bod = TORSO.filter(p => p[1] >= -.05 && p[1] <= .41).map(p => new THREE.Vector2(p[0] * 1.06 + .003, p[1])); const b = Dm(new THREE.LatheGeometry(bod, 28), DM.dress, J.spine); b.scale.z = .74;
+  const pel = Dm(sph(.125, 20, 14), DM.dress, J.hips); pel.scale.set(1.04, .72, .78);
+  const sk = [[.31,-.40],[.27,-.28],[.21,-.12],[.155,.02],[.128,.1],[.108,.17]].map(p => new THREE.Vector2(p[0], p[1])); const sg = new THREE.LatheGeometry(sk, 48); const pp = sg.attributes.position;
+  for (let i = 0; i < pp.count; i++){ const x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i); const a = Math.atan2(z, x), k = clamp((.1 - y) / .5, 0, 1), f = 1 + .07 * k * Math.sin(a * 9) + .025 * k * Math.sin(a * 17 + 1); pp.setX(i, x * f); pp.setZ(i, z * f * .86); }
+  sg.computeVertexNormals(); J.skirt = Dm(sg, DM.dress, J.hips);
+  Dm(cyl(.034, .038, .12, 14), DM.skin, J.chest, 0, .05, 0);
+  for (const s of ['shN','shP']) Dm(sph(.042, 14, 10), DM.skin, J[s]);
+  const bw = G(); bw.position.set(0, .16, -.1); J.spine.add(bw); for (const s of [-1, 1]){ const l = Dm(sph(.04, 12, 8), DM.dress, bw, s * .04, 0, 0); l.scale.set(1.1, .7, .4); } Dm(sph(.018, 8, 6), DM.dress, bw); }
+for (const s of ['N','P']){ const sx = s === 'N' ? -1 : 1;
+  Dm(limbGeo(.032, .026, .25), DM.skin, J['sh' + s]); Dm(limbGeo(.026, .02, .22), DM.skin, J['el' + s]);
+  const h = Dm(sph(.03, 12, 10), DM.skin, J['el' + s], 0, -.25, .005); h.scale.set(.6, 1.15, .38); const f = Dm(sph(.026, 10, 8), DM.skin, J['el' + s], 0, -.285, .008); f.scale.set(.55, 1.05, .3);
+  const th = Dm(sph(.012, 8, 6), DM.skin, J['el' + s], -sx * .02, -.25, .016); th.scale.set(.8, 1.6, .8); }
+for (const s of ['N','P']){
+  Dm(limbGeo(.062, .043, THI), DM.skin, J['th' + s]); Dm(limbGeo(.042, .026, SHN), DM.skin, J['kn' + s]);
+  const a = J['an' + s]; const top = Dm(rbox(.05, .04, .11), DM.skin, a, 0, -.03, .03); top.rotation.x = .55;
+  const sh = Dm(rbox(.062, .04, .15), DM.shoe, a, 0, -.058, .05); sh.rotation.x = .42; Dm(cyl(.007, .011, .075, 8), DM.shoe, a, 0, -.042, -.025);
+  const strap = Dm(new THREE.TorusGeometry(.028, .006, 6, 16), DM.shoe, a, 0, -.03, 0); strap.rotation.x = PI / 2; }
+{ const hg = sph(.112, 36, 28); const p = hg.attributes.position; for (let i = 0; i < p.count; i++){ const y = p.getY(i); if (y < 0){ const k = 1 - .2 * (-y / .112); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * (1 - .08 * (-y / .112))); } } hg.computeVertexNormals();
+  const hm = Dm(hg, DM.skin, J.head, 0, .12, 0); hm.scale.set(.92, 1.07, .97);
+  const F = G(); F.position.set(0, .12, 0); J.head.add(F);
+  for (const s of [-1, 1]){ const x = s * .04;
+    const ew = Dm(sph(.021, 16, 12), DM.white, F, x, .006, .093); ew.scale.set(1.25, .82, .5);
+    Dm(new THREE.CircleGeometry(.0125, 24), DM.iris, F, x, .006, .1042); Dm(new THREE.CircleGeometry(.0058, 16), DM.pupil, F, x, .006, .1046); Dm(new THREE.CircleGeometry(.0032, 10), DM.shine, F, x + .004, .011, .105);
+    const l = Dm(new THREE.TorusGeometry(.024, .0032, 6, 16, PI), DM.lash, F, x, .006, .097); l.scale.set(1.1, .62, 1); l.rotation.z = s * .06;
+    const w = Dm(cyl(.002, .0005, .018, 4), DM.lash, F, x + s * .028, .016, .094); w.rotation.z = -s * 1.0;
+    const b = Dm(cyl(.0035, .0025, .04, 6), DM.lash, F, x + s * .002, .038, .1); b.rotation.z = PI / 2 + s * .18;
+    const ck = Dm(new THREE.CircleGeometry(.021, 20), DM.blush, F, s * .058, -.03, .094); ck.rotation.y = s * .5;
+    const ear = Dm(sph(.02, 10, 8), DM.skin, F, s * .103, -.004, -.006); ear.scale.set(.45, 1, .8); }
+  const n = Dm(sph(.011, 10, 8), DM.skin, F, 0, -.02, .106); n.scale.set(.9, 1, .8);
+  const ul = Dm(sph(.017, 14, 10), DM.lip, F, 0, -.051, .098); ul.scale.set(1.3, .38, .52); const ll = Dm(sph(.016, 14, 10), DM.lip, F, 0, -.061, .097); ll.scale.set(1.2, .46, .56); }
+const hairG = G(); J.head.add(hairG);
+function buildHair(style){
+  hairG.clear(); J.pony = null; const Hm = DM.hair; const r = rng(77);
+  const cap = Dm(new THREE.SphereGeometry(.122, 36, 20, 0, PI * 2, 0, PI * .56), Hm, hairG, 0, .128, -.006); cap.scale.set(.97, 1.08, 1.02); cap.rotation.x = style === 'pony' ? -.18 : -.3;
+  if (style === 'long'){ const c = Dm(new THREE.CylinderGeometry(.122, .148, .5, 32, 1, true, PI * .3, PI * 1.4), Hm, hairG, 0, -.08, -.012); c.rotation.x = .06;
+    const bg = Dm(sph(.1, 20, 12), Hm, hairG, .03, .205, .062); bg.scale.set(1.05, .36, .55); bg.rotation.z = -.35; }
+  if (style === 'pony'){ Dm(new THREE.TorusGeometry(.028, .012, 8, 16), DM.dress, hairG, 0, .238, -.085).rotation.x = 1.0;
+    const pv = G(); pv.position.set(0, .24, -.1); hairG.add(pv); J.pony = pv; Dm(limbGeo(.042, .014, .42), Hm, pv);
+    const bg = Dm(sph(.1, 20, 12), Hm, hairG, 0, .2, .07); bg.scale.set(1.1, .3, .5); }
+  if (style === 'curls'){ for (let i = 0; i < 34; i++){ const th = r() * PI * 2, ph = r() * 1.75; const v = new V3(Math.sin(ph) * Math.sin(th), Math.cos(ph), Math.sin(ph) * Math.cos(th)); if (v.z > .35 && v.y < .45) continue;
+      Dm(sph(.05 + r() * .025, 12, 10), Hm, hairG, v.x * .15, .13 + v.y * .15, v.z * .14 - .01); } }
+  if (style === 'bob'){ Dm(new THREE.CylinderGeometry(.126, .142, .19, 32, 1, true, PI * .27, PI * 1.46), Hm, hairG, 0, .045, -.005);
+    Dm(new THREE.CylinderGeometry(.124, .126, .06, 32, 1, true, -.95, 1.9), Hm, hairG, 0, .175, .006); }
+  markDirty();
+}
+function setDoll(i){ const d = DOLLS[i] || DOLLS[0]; DM.dress.color.setHex(d.dress); DM.hair.color.setHex(d.hair); DM.hair.sheenColor.setHex(d.hair).lerp(new THREE.Color(0xffffff), .4); DM.skin.color.setHex(d.skin); DM.iris.color.setHex(d.eye); DM.lip.color.setHex(d.lip); buildHair(d.style); }
+setDoll(0);
+// soft round shadow under her feet
+const blob = new THREE.Mesh(new THREE.CircleGeometry(.34, 32), new THREE.MeshBasicMaterial({map:canvasTex(128, 128, (g, w) => { const gr = g.createRadialGradient(w/2, w/2, 2, w/2, w/2, w/2); gr.addColorStop(0, 'rgba(90,20,50,.42)'); gr.addColorStop(1, 'rgba(90,20,50,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); }), transparent:true, depthWrite:false}));
+blob.rotation.x = -PI / 2; blob.position.y = .009; doll.add(blob);
+// invisible tap target so a tap on her makes her wave
+const dollHit = new THREE.Mesh(new THREE.CylinderGeometry(.32, .32, 1.8, 10), new THREE.MeshBasicMaterial({visible:false})); dollHit.position.y = .9; dollHit.userData.doll = true; doll.add(dollHit);
+
+/* poses */
+function blank(){ const p = {by:0, sk:1}; for (const k of JK) p[k] = [0, 0, 0]; return p; }
+function idlePose(p, t){ p.chest[0] = Math.sin(t * 1.7) * .018; p.head[1] = Math.sin(t * .37) * .22; p.head[0] = Math.sin(t * .53) * .05; p.hips[2] = .035; p.thN[2] = -.03; p.thP = [-.06, 0, 0]; p.knP[0] = .13; p.anP[0] = -.06;
+  p.shN = [.05, 0, -.13]; p.shP = [.05, 0, .13]; p.elN = [-.18, 0, 0]; p.elP = [-.18, 0, 0]; }
+function walkPose(p, w){ const s = Math.sin(w); p.thN[0] = -s * .5; p.thP[0] = s * .5; p.knN[0] = .12 + .6 * Math.max(0, -Math.sin(w + .9)); p.knP[0] = .12 + .6 * Math.max(0, Math.sin(w + .9));
+  p.anN[0] = -p.knN[0] * .3; p.anP[0] = -p.knP[0] * .3; p.shN = [s * .42, 0, -.1]; p.shP = [-s * .42, 0, .1]; p.elN = [-.3, 0, 0]; p.elP = [-.3, 0, 0]; p.hips[1] = s * .12; p.hips[2] = Math.cos(w) * .05; p.chest[1] = -s * .08; p.by = Math.abs(Math.cos(w)) * .025; }
+function wavePose(p, t){ idlePose(p, t); p.shN = [-.15, 0, -2.5]; p.elN = [0, 0, .35 + Math.sin(t * 10) * .45]; p.head = [0, -.15, -.12]; p.hips[2] = .06; }
+function lookPose(p, t){ idlePose(p, t); p.shN = [.12, 0, -.55]; p.elN = [0, 0, 1.75]; p.head[0] = -.08; p.hips[2] = .08; }   // hand on hip, looking at the art
+function vrPose(p, t){ idlePose(p, t); if (t < 1.4){ p.shN = [-.55, 0, -2.2]; p.elN = [0, 0, -1.9]; p.shP = [-.55, 0, 2.2]; p.elP = [0, 0, 1.9]; p.head[0] = -.05; }
+  else { p.shN = [-.2, 0, -.5]; p.shP = [-.2, 0, .5]; p.elN = [-.4, 0, 0]; p.elP = [-.4, 0, 0]; p.by = Math.abs(Math.sin((t - 1.4) * 7)) * .03; } }
+
+/* her VR glasses, and the stand they sit on */
+const VRTO = new V3(0, .135, .095), VISOR = mGlow(0x7fd6ff, .9);
+const dollHS = G(); dollHS.position.copy(VRTO); dollHS.visible = false; J.head.add(dollHS);
+M(rbox(.23, .095, .11), mStd(0x222228, .2), dollHS); M(rbox(.2, .068, .01), VISOR, dollHS, 0, 0, .056);
+M(new THREE.TorusGeometry(.118, .011, 8, 32), mStd(0x333338, .6), dollHS, 0, 0, -.095, PI / 2);
+function vrStand(){ const g = G(); const ped = M(cyl(.26, .3, 1.0, 32), mStd(0xfff4f8, .35), g, 0, .5, 0); M(cyl(.3, .3, .03, 32), goldLip, g, 0, 1.0, 0);
+  const h = G(); h.position.set(0, 1.12, 0); h.rotation.y = .4; g.add(h); M(rbox(.3, .16, .18), mStd(0x222228, .2), h); M(rbox(.26, .12, .02), mGlow(0x7fd6ff, .6), h, 0, 0, .09); M(new THREE.TorusGeometry(.15, .015, 8, 24), mStd(0x333338, .6), h, 0, 0, -.12, PI / 2.2);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(.5, .14), new THREE.MeshBasicMaterial({map:canvasTex(512, 144, (c, w, hh) => { c.fillStyle = '#e0558f'; c.fillRect(0, 0, w, hh); c.fillStyle = '#fff'; c.font = '600 44px "IBM Plex Mono", monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('PUT ME ON', w / 2, hh / 2 + 2); }), toneMapped:false}));
+  sign.position.set(0, .78, .305); g.add(sign); g.userData.hs = h; g.userData.parts = [ped, sign]; return g; }
+function vrWear(on, s){ if (dollHS.parent !== J.head){ J.head.add(dollHS); dollHS.position.copy(VRTO); dollHS.quaternion.identity(); dollHS.scale.setScalar(1); }
+  dollHS.visible = on; if (s && s.stand) s.stand.userData.hs.visible = !on; VISOR.emissiveIntensity = .9; markDirty(); }
+let vrFx = null; const vrFrom = new V3(), _hp = new V3(), _hq = new THREE.Quaternion(), _sq = new THREE.Quaternion(), YAX = new V3(0, 1, 0);
+function vrStartFx(s){ vrFx = {s}; s.stand.userData.hs.getWorldPosition(vrFrom); scene.add(dollHS); dollHS.scale.setScalar(S); dollHS.position.copy(vrFrom); dollHS.visible = false; }
+function vrTickFx(t){ if (!vrFx) return;
+  const k = clamp((t - .25) / .9, 0, 1);
+  if (k > 0 && !vrFx.picked){ vrFx.picked = true; vrFx.s.stand.userData.hs.visible = false; dollHS.visible = true; }
+  if (k < 1){ J.head.updateWorldMatrix(true, false); _hp.copy(VRTO); J.head.localToWorld(_hp); J.head.getWorldQuaternion(_hq);
+    const e = ease(k); dollHS.position.lerpVectors(vrFrom, _hp, e); dollHS.position.y += Math.sin(PI * e) * .35; _sq.setFromAxisAngle(YAX, (1 - e) * PI * 2); dollHS.quaternion.copy(_hq).multiply(_sq); }
+  else if (dollHS.parent !== J.head){ J.head.add(dollHS); dollHS.position.copy(VRTO); dollHS.quaternion.identity(); dollHS.scale.setScalar(1); }
+  VISOR.emissiveIntensity = k >= 1 ? 1.4 + Math.sin(t * 9) * .8 : .9;
+  if (t > 1.2 && !vrFx.toast){ vrFx.toast = true; toast('Glasses on!', 1400); }
+  if (t > 2.3 && !vrFx.go){ vrFx.go = true; const s = vrFx.s; fadeTo(() => open360(s.i)); }
+}
+function fadeTo(fn){ const f = $('#fade'); if (REDUCED){ fn(); return; } f.classList.add('on'); setTimeout(() => { fn(); requestAnimationFrame(() => f.classList.remove('on')); }, 380); }
+
+/* walking: tap the floor and she walks there; the camera follows from behind */
+const dpos = new V3(0, 0, 3.0); let heading = PI, walkT = 0, target = null, onArrive = null, faceGoal = null, act = null, actT = 0;
+const OBST = [{x:0, z:-.3, r:.78}];
+const keys = {};
+function freeSpot(p){ p.x = clamp(p.x, -W / 2 + .45, W / 2 - .45); p.z = clamp(p.z, -D / 2 + .45, D / 2 - .45); p.y = 0;
+  for (const o of OBST){ const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), m = o.r + .26; if (d < m){ const k = d < 1e-3 ? 1 : m / d; p.x = o.x + (d < 1e-3 ? m : dx * k); p.z = o.z + dz * (d < 1e-3 ? 0 : k); } }
+  return p; }
+function walkDoll(p, done, face){ target = freeSpot(p.clone()); onArrive = done || null; faceGoal = face ?? null; if (act !== 'vrOn') act = null; markDirty(); }
+const P = blank();
+const lerpAng = (a, b, k) => { const d = ((b - a + PI * 3) % (PI * 2)) - PI; return a + d * k; };
+function updateDoll(dt, t){
+  if (!doll.visible) return false;
+  let moving = false;
+  let vx = 0, vz = 0;
+  if (mode === 'room' && (keys.up || keys.down || keys.left || keys.right)){
+    const fx = -Math.sin(follow.yaw), fz = -Math.cos(follow.yaw);    // away from the camera
+    const f = (keys.up ? 1 : 0) - (keys.down ? 1 : 0), r = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    vx = fx * f - fz * r; vz = fz * f + fx * r; target = null;
+  } else if (target){ vx = target.x - dpos.x; vz = target.z - dpos.z; if (Math.hypot(vx, vz) < .06){ dpos.copy(target); target = null; vx = vz = 0; const cb = onArrive; onArrive = null; cb && cb(); } }
+  const len = Math.hypot(vx, vz);
+  if (len > .01){ const sp = 2.6 * Math.min(1, len + .35); dpos.x += vx / len * Math.min(len, sp * dt); dpos.z += vz / len * Math.min(len, sp * dt); freeSpot(dpos); heading = Math.atan2(vx, vz); walkT += dt * 8.5; moving = true; }
+  else if (faceGoal !== null) heading = lerpAng(heading, faceGoal, Math.min(1, dt * 6));
+  if (act) actT += dt; if (act === 'wave' && actT > 2.4) act = null;
+  for (const k of JK){ P[k][0] = P[k][1] = P[k][2] = 0; } P.by = 0; P.sk = 1;
+  if (moving) walkPose(P, walkT); else if (act === 'wave') wavePose(P, actT); else if (act === 'vrOn') vrPose(P, actT); else if (act === 'look') lookPose(P, t); else idlePose(P, t);
+  const kk = 1 - Math.exp(-dt * (moving || act === 'wave' ? 18 : 9));
+  for (const k of JK){ const r = J[k].rotation, p = P[k]; r.x += (p[0] - r.x) * kk; r.y += (p[1] - r.y) * kk; r.z += (p[2] - r.z) * kk; }
+  body.position.y += (P.by - body.position.y) * kk;
+  J.skirt.scale.y += (P.sk - J.skirt.scale.y) * kk; const sw = 1 + (1 - J.skirt.scale.y) * .35; J.skirt.scale.x = J.skirt.scale.z = sw;
+  if (J.pony){ J.pony.rotation.x = .38 + (moving ? Math.sin(walkT) * .08 : 0); J.pony.rotation.z = Math.sin(t * 2.2) * .05; }
+  const kp = 1 - Math.exp(-dt * 14); doll.position.x += (dpos.x - doll.position.x) * kp; doll.position.z += (dpos.z - doll.position.z) * kp;
+  doll.rotation.y = lerpAng(doll.rotation.y, heading, Math.min(1, dt * 10));
+  if (act === 'vrOn') vrTickFx(actT);
+  return moving || !!act;
+}
+
+/* camera: follows the doll in the room, flies into frames, and sits off-centre so the art stays above the sheet */
+let mode = 'intro';           // intro | room | focus | vrwalk | vr360
+let focusI = -1, zoom = 1; const pan = new THREE.Vector2();
+let flight = null;            // {fromPos, fromQuat, to:()=>({pos,quat}), t0, dur, done}
+const inset = {x:0, y:0};
+let collapsed = false;
+const follow = {yaw:0, h:2.45, dist:3.2};
+const tmpObj = new THREE.PerspectiveCamera(); // a camera, so lookAt points its -z at the target like the real one
+function quatLooking(pos, tgt){ tmpObj.position.copy(pos); tmpObj.lookAt(tgt); return tmpObj.quaternion.clone(); }
+function insetTargets(){
+  if (mode !== 'focus' && !(flight && flight.focus)) return [0, 0];
+  if (SIDE_MQ.matches) return collapsed ? [0, 0] : [Math.min(400, innerWidth * .46), 0];
+  if (collapsed){ const h = $('#sheet').offsetHeight || 110; return [0, h]; }
+  return [0, Math.round(innerHeight * .56)];
+}
+function applyInset(){
+  const Wv = innerWidth, Hv = innerHeight;
+  if (inset.x < .5 && inset.y < .5){ camera.aspect = Wv / Hv; camera.clearViewOffset(); }
+  else { const fw = Wv + inset.x, fh = Hv + inset.y; camera.aspect = fw / fh; camera.setViewOffset(fw, fh, inset.x, inset.y, Wv, Hv); }
+  camera.updateProjectionMatrix();
+}
+function focusPose(i){
+  const s = slots[i]; const Wv = innerWidth, Hv = innerHeight; const fh = Hv + inset.y, freeW = Math.max(120, Wv - inset.x), freeH = Math.max(120, Hv - inset.y);
+  const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const dH = s.totalH * fh / (.84 * freeH * 2 * tan), dW = s.totalW * fh / (.88 * freeW * 2 * tan);
+  const dist = clamp(Math.max(dH, dW), .7, 4.3) * zoom;
+  const maxPan = new THREE.Vector2(Math.max(0, s.artW / 2 * (1 - zoom)), Math.max(0, s.artH / 2 * (1 - zoom)));
+  pan.x = clamp(pan.x, -maxPan.x, maxPan.x); pan.y = clamp(pan.y, -maxPan.y, maxPan.y);
+  const tg = s.center.clone().addScaledVector(s.right, pan.x).addScaledVector(s.up, pan.y);
+  const pos = tg.clone().addScaledVector(s.normal, dist);
+  return {pos, quat:quatLooking(pos, tg)};
+}
+function followPose(){
+  const dir = new V3(Math.sin(follow.yaw), 0, Math.cos(follow.yaw)); const base = doll.position;
+  let d = follow.dist;   // pull in so the camera never leaves the room
+  const lim = (p, v, a, b) => v > 1e-4 ? (b - p) / v : v < -1e-4 ? (a - p) / v : Infinity;
+  d = Math.min(d, lim(base.x, dir.x, -W / 2 + .2, W / 2 - .2), lim(base.z, dir.z, -D / 2 + .2, D / 2 - .2));
+  d = Math.max(.9, d);
+  const pos = new V3(base.x + dir.x * d, follow.h, base.z + dir.z * d);
+  const tg = new V3(base.x - dir.x * 2.1, 1.3, base.z - dir.z * 2.1);   // look past her, so she sits low in the frame
+  return {pos, quat:quatLooking(pos, tg)};
+}
+function standPose(s){
+  const p = s.standPos.clone().addScaledVector(s.normal, 2.7).addScaledVector(s.right, -.7); p.y = 1.85;
+  const tg = s.standPos.clone().addScaledVector(s.normal, .25).addScaledVector(s.right, -.3); tg.y = 1.35;
+  return {pos:p, quat:quatLooking(p, tg)};
+}
+function fly(to, dur, extra = {}){
+  flight = {fromPos:camera.position.clone(), fromQuat:camera.quaternion.clone(), to, t0:performance.now(), dur:REDUCED ? 1 : dur, ...extra};
+}
+function viewSpot(s){ return s.center.clone().addScaledVector(s.normal, 1.25).addScaledVector(s.right, s.totalW / 2 + .5); }
+function headingTo(from, to){ return Math.atan2(to.x - from.x, to.z - from.z); }
+function focusSlot(i){
+  const s = slots[i]; if (!s || !s.a) return;
+  const st = ans(s.a.id);
+  if (s.a.kind === 'vr' && !st.vrSeen){ startVR(i); return; }
+  const was = mode === 'focus';
+  focusI = i; zoom = 1; pan.set(0, 0); mode = 'focus'; collapsed = false; $('#sheet').classList.remove('collapsed'); $('#sLook').setAttribute('aria-pressed', 'false'); $('#sLook').textContent = 'Look closer';
+  openSheet(i);
+  const spot = freeSpot(viewSpot(s)); walkDoll(spot, () => { act = 'look'; }, headingTo(spot, s.center));
+  fly(() => focusPose(i), was ? 900 : 1150, {focus:true});
+  hideCoach(); renderRoomUI();
+}
+function exitFocus(){
+  if (mode !== 'focus') return; mode = 'room'; closeSheet(); if (act === 'look') act = null;
+  follow.yaw = heading + PI;
+  fly(followPose, 900); renderRoomUI();
+}
+function enterRoomCamera(){
+  dpos.set(0, 0, 3.4); doll.position.copy(dpos); heading = PI; doll.rotation.y = PI; doll.visible = true; follow.yaw = 0;
+  walkDoll(new V3(0, 0, 1.15), () => { act = 'wave'; actT = 0; });
+  fly(followPose, 1300);
+}
+
+/* ---------------- the VR piece: she puts the glasses on, then you stand inside a 360° image ---------------- */
+const vrScene = new THREE.Scene(); vrScene.background = new THREE.Color('#141016');
+const cam360 = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, .05, 100);
+const panoGeo = new THREE.SphereGeometry(30, 72, 48); panoGeo.scale(-1, 1, 1);
+const pano = new THREE.Mesh(panoGeo, new THREE.MeshBasicMaterial({color:'#ffffff', toneMapped:false})); vrScene.add(pano);
+const look360 = {yaw:0, pitch:0, fov:75};
+let vrI = -1, vrT0 = 0, xrSession = null;
+// Cover Story only: real magazines drifting around you, so the piece has depth as well as a backdrop
+const vrMags = new THREE.Group(); vrMags.visible = false; vrScene.add(vrMags);
+function fillMags(){
+  if (vrMags.children.length) return; const texs = [0, 1, 2, 3].map(i => canvasTex(640, 860, (g, w, h) => coverArt(g, w, h, i))), geo = new THREE.BoxGeometry(1.5, 2, .03);
+  for (let i = 0; i < 14; i++){ const a = i / 14 * Math.PI * 2 + .22, rad = 4.2 + (i % 3) * .9, m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({map:texs[i % 4], toneMapped:false}));
+    m.position.set(Math.sin(a) * rad, -.5 + (i * 5 % 4) * .75, -Math.cos(a) * rad); m.lookAt(0, m.position.y, 0); m.rotateZ((i % 2 ? 1 : -1) * .12); m.userData.y = m.position.y; vrMags.add(m); }
+}
+function driftMags(dt, now){ if (!vrMags.visible || REDUCED) return; vrMags.rotation.y += dt * .035; vrMags.children.forEach((m, i) => { m.position.y = m.userData.y + Math.sin(now / 1600 + i) * .1; }); }
+function startVR(i){
+  const s = slots[i]; if (!s || !s.a || !s.stand) return;
+  if (mode === 'focus'){ closeSheet(); }
+  mode = 'vrwalk'; focusI = i; hideCoach(); renderRoomUI();
+  const spot = freeSpot(s.standPos.clone().addScaledVector(s.normal, .25).addScaledVector(s.right, -.6));   // beside the stand, so you see her face
+  fly(() => standPose(s), 1100);
+  walkDoll(spot, () => { act = 'vrOn'; actT = 0; vrStartFx(s); }, headingTo(spot, s.standPos));
+  if (REDUCED){ target = null; dpos.copy(spot); open360(i); }
+}
+function open360(i){
+  const s = slots[i]; vrI = i; mode = 'vr360'; vrFx = null; act = null;
+  pano.material.map = s.art.material.map; pano.material.needsUpdate = true;
+  vrMags.visible = !!s.a.builtin; if (vrMags.visible) fillMags();
+  look360.yaw = 0; look360.pitch = 0; look360.fov = innerWidth / innerHeight < .8 ? 85 : 75;
+  $('#vrTitle').textContent = num(i) + ' · ' + (s.a.title || 'Untitled');
+  const st = ans(s.a.id); $('#vrDone').textContent = st.stage === 'blind' ? 'Take off the glasses · rate it' : 'Take off the glasses';
+  $('#vr360').hidden = false; $('#hud').hidden = true; vrT0 = performance.now();
+  $('#vrHeadset').hidden = true;
+  try { navigator.xr && navigator.xr.isSessionSupported('immersive-vr').then(ok => { $('#vrHeadset').hidden = !ok; }).catch(() => {}); } catch(e){}
+  markDirty();
+}
+function close360(){
+  if (mode !== 'vr360') return; const i = vrI, s = slots[i]; const st = ans(s.a.id);
+  st.vrSeconds = (st.vrSeconds || 0) + Math.round((performance.now() - vrT0) / 1000); st.vrSeen = true; saveState();
+  if (xrSession){ try { xrSession.end(); } catch(e){} }
+  fadeTo(() => { $('#vr360').hidden = true; vrWear(false, s); camera.position.copy(standPose(s).pos); camera.quaternion.copy(standPose(s).quat); mode = 'room'; focusSlot(i); });
+}
+$('#vrDone').onclick = close360;
+$('#vrHeadset').onclick = async () => {
+  try {
+    const session = await navigator.xr.requestSession('immersive-vr', {optionalFeatures:['local-floor']});
+    renderer.xr.enabled = true; renderer.xr.setReferenceSpaceType('local'); await renderer.xr.setSession(session); xrSession = session;
+    session.addEventListener('end', () => { xrSession = null; renderer.xr.enabled = false; applyInset(); markDirty(); });
+  } catch(e){ toast('Couldn’t open the headset view here'); }
+};
+
+/* ---------------- the 3D piece: model-viewer turns it, and hands it to the phone's own AR ---------------- */
+let glbUrl = null, v3T0 = 0;
+async function sculptureGlb(){
+  if (glbUrl) return glbUrl;
+  const {GLTFExporter} = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/exporters/GLTFExporter.js');
+  const buf = await new GLTFExporter().parseAsync(makeSculpture(), {binary:true});
+  return glbUrl = URL.createObjectURL(new Blob([buf], {type:'model/gltf-binary'}));
+}
+async function open3D(){
+  const s = slots[focusI]; if (!s) return; $('#v3No').textContent = num(s.i); $('#v3Title').textContent = s.a.title || 'Untitled'; $('#view3d').hidden = false; v3T0 = performance.now();
+  $('#v3Hint').textContent = 'Getting the piece ready…'; const box = $('#v3Stage');
+  try {
+    if (!$('model-viewer', box)){
+      const [src] = await Promise.all([sculptureGlb(), import('https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js')]);
+      box.innerHTML = `<model-viewer src="${src}" alt="${esc(s.a.title)}, a 3D sculpture" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" ar ar-modes="webxr quick-look" ar-placement="floor" ar-scale="auto" touch-action="pan-y">
+        <button slot="ar-button" class="btn primary" style="position:absolute;left:50%;bottom:12px;transform:translateX(-50%)">See it in your room</button></model-viewer>`;
+      const mv = $('model-viewer', box);
+      mv.addEventListener('load', () => { $('#v3Hint').textContent = mv.canActivateAR ? 'Drag to turn it · tap the button to stand it in your room' : 'Drag to turn it · open this on a phone to stand it in your room'; });
+      mv.addEventListener('ar-status', e => { if (e.detail.status === 'failed') toast('AR isn’t available on this phone'); });
+    } else $('#v3Hint').textContent = 'Drag to turn it · pinch or scroll to zoom';
+  } catch(e){ console.warn(e); $('#v3Hint').textContent = 'Couldn’t load the 3D view. Check your connection and try again.'; }
+}
+function close3D(){ if ($('#view3d').hidden) return; $('#view3d').hidden = true; const s = slots[focusI]; if (s){ const st = ans(s.a.id); st.vrSeconds = (st.vrSeconds || 0) + Math.round((performance.now() - v3T0) / 1000); saveState(); } }
+$('#v3Close').onclick = close3D;
+
+// render on demand: the room only redraws while something moves, which keeps phones cool at the exhibition
+let lastT = performance.now(), lastDraw = 0;
+function tick(now){
+  const dt = Math.min(.05, Math.max(0, (now - lastT) / 1000)); lastT = now;
+  if (renderer.xr.isPresenting){ driftMags(dt, now); renderer.render(vrScene, cam360); return; }
+  if (!$('#curator').hidden) return;
+  const busy = updateDoll(dt, now / 1000);
+  const [tx, ty] = insetTargets(); const k = REDUCED ? 1 : .14;
+  const anyKey = keys.up || keys.down || keys.left || keys.right;
+  const active = flight || inset.x !== tx || inset.y !== ty || drag || pinch || target || busy || anyKey || mode === 'vrwalk' || (mode === 'vr360' && vrMags.visible);
+  const idleRoom = mode === 'room' && doll.visible;
+  if (!active && !dirty){ if (!idleRoom || now - lastDraw < 33) return; }   // an idle room breathes at ~30 fps
+  dirty = false; lastDraw = now;
+  inset.x += (tx - inset.x) * k; inset.y += (ty - inset.y) * k; if (Math.abs(tx - inset.x) < .5) inset.x = tx; if (Math.abs(ty - inset.y) < .5) inset.y = ty;
+  applyInset();
+  if (mode === 'vr360'){ driftMags(dt, now); cam360.aspect = innerWidth / innerHeight; cam360.fov = look360.fov; cam360.updateProjectionMatrix(); cam360.rotation.set(look360.pitch, look360.yaw, 0, 'YXZ'); renderer.render(vrScene, cam360); return; }
+  if (flight){
+    const t = clamp((now - flight.t0) / flight.dur, 0, 1), e = ease(t); const to = flight.to();
+    camera.position.lerpVectors(flight.fromPos, to.pos, e); camera.quaternion.slerpQuaternions(flight.fromQuat, to.quat, e);
+    if (t >= 1){ const f = flight; flight = null; f.done && f.done(); }
+  } else if (mode === 'focus' && focusI >= 0){ const p = focusPose(focusI); camera.position.copy(p.pos); camera.quaternion.copy(p.quat); }
+  else if (mode === 'intro'){ camera.position.set(.6, EYE, 3.7); camera.quaternion.copy(quatLooking(camera.position, new THREE.Vector3(-.4, 1.75, -D / 2))); }
+  else if (mode === 'vrwalk' && slots[focusI]){ const p = standPose(slots[focusI]); const kc = 1 - Math.exp(-dt * 4); camera.position.lerp(p.pos, kc); camera.quaternion.slerp(p.quat, kc); }
+  else { const p = followPose(); const kc = 1 - Math.exp(-dt * 4.5); camera.position.lerp(p.pos, kc); camera.quaternion.slerp(p.quat, 1 - Math.exp(-dt * 6)); }
+  renderer.render(scene, camera);
+}
+renderer.setAnimationLoop(tick);
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.fov = baseFov(); applyInset(); markDirty(); });
+
+/* pointer input */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); const ptrs = new Map(); let drag = null, pinch = null;
+const cv = renderer.domElement;
+function pick(e){ const r = cv.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera);
+  return ray.intersectObjects([...hitTargets, dollHit, floor, rug], false)[0]; }
+cv.addEventListener('pointerdown', e => {
+  if (mode === 'intro') return; cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (ptrs.size === 1) drag = {x:e.clientX, y:e.clientY, sx:e.clientX, sy:e.clientY, t:performance.now(), moved:false};
+  if (ptrs.size === 2){ const [a, b] = [...ptrs.values()]; pinch = {d:Math.hypot(a.x - b.x, a.y - b.y), z:zoom, f:look360.fov}; if (drag) drag.moved = true; }
+});
+cv.addEventListener('pointermove', e => {
+  if ((mode === 'room' || mode === 'focus') && !ptrs.size && e.pointerType === 'mouse'){ const hit = !flight && pick(e); const o = hit && hit.object.userData; cv.style.cursor = o && (o.slot !== undefined || o.doll) ? 'pointer' : (mode === 'room' ? 'grab' : 'default'); }
+  if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pinch && ptrs.size === 2){ const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (mode === 'focus') zoom = clamp(pinch.z * pinch.d / d, .3, 1); if (mode === 'vr360') look360.fov = clamp(pinch.f * pinch.d / d, 35, 95); markDirty(); return; }
+  if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > (e.pointerType === 'touch' ? 12 : 6)) drag.moved = true;
+  if (!drag.moved) return;
+  if (mode === 'vr360'){ const k = look360.fov / 75; look360.yaw += dx * .005 * k; look360.pitch = clamp(look360.pitch + dy * .005 * k, -1.45, 1.45); markDirty(); return; }
+  if (flight) return;
+  if (mode === 'room'){ follow.yaw -= dx * .006; follow.h = clamp(follow.h + dy * .006, 1.4, 3.4); }
+  else if (mode === 'focus' && zoom < .98){ const s = slots[focusI]; const k = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.distanceTo(s.center) / (innerHeight + inset.y); pan.x -= dx * k; pan.y += dy * k; }
+});
+function endPtr(e){
+  if (!ptrs.has(e.pointerId)) return; markDirty(); ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
+  if (ptrs.size === 0 && drag){ const tap = !drag.moved && performance.now() - drag.t < 700; drag = null; if (tap) onTap(e); }
+}
+cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('wheel', e => { if (mode === 'vr360'){ e.preventDefault(); look360.fov = clamp(look360.fov * (1 + e.deltaY * .001), 35, 95); markDirty(); return; }
+  if (mode !== 'focus') return; e.preventDefault(); zoom = clamp(zoom * (1 + e.deltaY * .0012), .3, 1); markDirty(); }, {passive:false});
+function onTap(e){
+  if (mode === 'vr360') return;
+  if (mode === 'vrwalk'){ if (slots[focusI]){ target = null; open360(focusI); } return; }   // tap to skip her putting the glasses on
+  const hit = pick(e); if (!hit) return; const o = hit.object.userData;
+  if (o.doll){ act = 'wave'; actT = 0; markDirty(); return; }
+  if (o.slot !== undefined){
+    if (o.vr){ startVR(o.slot); return; }
+    if (mode === 'focus' && o.slot === focusI){ toggleLook(); return; } focusSlot(o.slot); return; }
+  if (mode === 'room' && o.floor) walkDoll(hit.point);
+}
+const KEYMAP = {ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right'};
+addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input,textarea')) return;
+  if (e.key === 'Escape'){ if (!$('#view3d').hidden) return close3D(); if (!$('#index').hidden) return closeIndex(); if (mode === 'vr360') return close360(); if (mode === 'focus') return exitFocus(); }
+  if (mode === 'focus' && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')){ e.preventDefault(); stepPiece(e.key === 'ArrowRight' ? 1 : -1); return; }
+  if (mode === 'room' && KEYMAP[e.code]){ e.preventDefault(); keys[KEYMAP[e.code]] = true; markDirty(); }
+});
+addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+/* ---------------- room UI ---------------- */
+const placed = () => slots.filter(s => s && s.a);
+function nextUnrated(from = -1){
+  const list = placed(); if (!list.length) return -1;
+  const order = list.map(s => s.i); const start = from >= 0 ? order.indexOf(from) + 1 : order.indexOf(order[state.startOffset % order.length]);
+  for (let k = 0; k < order.length; k++){ const i = order[(start + k + order.length) % order.length]; const st = state.answers[slots[i].a.id]; if (!st || st.stage !== 'done') return i; }
+  return -1;
+}
+function doneCount(){ return placed().filter(s => (state.answers[s.a.id] || {}).stage === 'done').length; }
+function renderRoomUI(){
+  const inRoom = mode === 'room' || mode === 'focus' || mode === 'vrwalk';
+  $('#hud').hidden = !inRoom; $('#roombar').hidden = mode !== 'room';
+  if (!state) return;
+  const n = placed().length, d = doneCount();
+  $('#progressTxt').textContent = d + ' / ' + n;
+  $('#progressDots').innerHTML = placed().map(s => `<i class="${(state.answers[s.a.id] || {}).stage === 'done' ? 'on' : ''}"></i>`).join('');
+  const nb = $('#nextUnratedBtn');
+  if (d >= n && n){ nb.textContent = state.finished ? 'See your results' : 'Finish'; nb.dataset.act = 'finish'; }
+  else { const nx = nextUnrated(); nb.textContent = d === 0 ? 'Start with ' + num(nx) : 'Rate next · ' + num(nx); nb.dataset.act = 'next'; }
+  renderSave();
+}
+$('#nextUnratedBtn').onclick = e => { if (e.currentTarget.dataset.act === 'finish') return openFinal(); const i = nextUnrated(); if (i >= 0) focusSlot(i); };
+$('#indexBtn').onclick = openIndex; $('#progressBtn').onclick = openIndex;
+let coachT;
+function showCoach(){ const c = $('#coach'); c.hidden = false; c.style.opacity = 1; clearTimeout(coachT); coachT = setTimeout(hideCoach, 6500); }
+function hideCoach(){ const c = $('#coach'); c.style.opacity = 0; setTimeout(() => c.hidden = true, 500); }
+
+/* ---------------- rating sheet ---------------- */
+const DIMS = [['beautiful','Beautiful'],['original','Original'],['moves','Moves me'],['worth','Worth paying for']];
+const REASONS = ['The effort behind it','The story or process','Feels less personal','Impressive technique','Feels like a shortcut','Nothing changed'];
+function scaleHTML(field, label, val, before){
+  return `<div class="scale"><div class="qhead"><span class="qlabel" id="q-${field}">${label}</span><span class="ends">not at all · very</span></div>
+  <div class="dots5${before ? ' has-before' : ''}" role="group" aria-labelledby="q-${field}" data-field="${field}">${[1,2,3,4,5].map(n => `<button type="button" data-v="${n}" aria-pressed="${val === n}" class="${before === n ? 'before' : ''}">${n}</button>`).join('')}</div></div>`;
+}
+function segHTML(field, label, opts, val, cls = ''){
+  return `<div class="field"><span class="qlabel" id="q-${field}">${label}</span><div class="seg ${cls}" role="group" aria-labelledby="q-${field}" data-field="${field}">${opts.map(([v, t]) => `<button type="button" data-v="${v}" aria-pressed="${val === v}">${t}</button>`).join('')}</div></div>`;
+}
+function revealHTML(a, st){
+  const r = a.reveal || {}; const m = MAKER[r.maker] || MAKER.human; const g = MAKER[st.blind.guess]; const right = st.blind.guess === r.maker;
+  return `<div class="reveal" style="border-color:${m.hex}">
+    <span class="eyebrow">Made by</span><div class="who" style="color:${m.hex}">${esc(m.who)}</div>
+    <div class="verdict ${right ? 'yes' : 'no'}">${right ? '✓ You got it.' : '✗ You said ' + esc(g ? g.short : '?') + '.'}</div>
+    ${(r.credit || r.how || r.time) ? `<dl>${r.credit ? `<dt>Credit</dt><dd>${esc(r.credit)}</dd>` : ''}${r.how ? `<dt>How</dt><dd>${esc(r.how)}</dd>` : ''}${r.time ? `<dt>Time</dt><dd>${esc(r.time)}</dd>` : ''}</dl>` : ''}
+  </div>`;
+}
+function openSheet(i){
+  const s = slots[i], a = s.a, st = ans(a.id);
+  if (!st.openedAt) st.openedAt = Date.now();
+  if (st.stage === 'blind') st.openedAt = st.openedAt || Date.now();
+  $('#sEyebrow').textContent = num(i) + ' · ' + WALL(i); $('#sTitle').textContent = a.title || 'Untitled';
+  renderSheetBody(); $('#sheet').classList.remove('closed'); $('#sBody').scrollTop = 0; saveState();
+}
+function closeSheet(){ $('#sheet').classList.add('closed'); }
+function renderSheetBody(){
+  const s = slots[focusI]; if (!s) return; const a = s.a, st = ans(a.id); const b = st.blind; let html = '';
+  const vrRow = a.kind === 'vr' ? `<div class="vrnote"><span>A 360° piece you see through the glasses.</span><button class="btn small" id="againVR">Put the glasses on again</button></div>` : a.kind === '3d' ? `<div class="vrnote"><span>A 3D sculpture. Turn it around, or stand it in your own room.</span><button class="btn small" id="open3D">Open in 3D · AR</button></div>` : '';
+  if (st.stage === 'blind'){
+    html = `<div class="step">${vrRow}<h3>Rate it first</h3>${DIMS.map(([f, l]) => scaleHTML(f, l, b[f])).join('')}
+      ${segHTML('guess', 'Who made it?', [['human','A human'],['ai','AI'],['both','Both']], b.guess, 'makerseg')}
+      ${segHTML('confidence', 'How sure are you?', [['guessing','Just guessing'],['fairly','Fairly sure'],['certain','Certain']], b.confidence)}
+      <div class="actions"><button class="btn primary" id="revealBtn">Reveal who made it</button><span class="hintline" id="revealHint"></span></div></div>`;
+  } else {
+    const af = st.after; const last = nextUnrated(focusI) === -1 || (nextUnrated(focusI) === focusI);
+    html = `<div class="step">${vrRow}${revealHTML(a, st)}
+      <h3>Now that you know</h3>
+      ${scaleHTML('a_moves', 'Moves me', af.moves, b.moves)}${scaleHTML('a_worth', 'Worth paying for', af.worth, b.worth)}
+      <div class="field"><span class="qlabel" id="q-reasons">What changed your view? <small>(optional, pick any)</small></span>
+        <div class="tags" role="group" aria-labelledby="q-reasons" data-field="reasons">${REASONS.map(r => `<button type="button" data-v="${esc(r)}" aria-pressed="${(af.reasons || []).includes(r)}">${esc(r)}</button>`).join('')}</div></div>
+      <div class="actions"><button class="btn primary" id="doneBtn">${st.stage === 'done' ? (last ? 'Finish' : 'Next piece') : (last ? 'Save and finish' : 'Save · next piece')}</button><span class="hintline" id="doneHint"></span></div></div>`;
+  }
+  $('#sBody').innerHTML = html; updateSheetButtons();
+}
+function blindMissing(st){ return [...DIMS.map(([f]) => f), 'guess', 'confidence'].filter(f => !st.blind[f]); }
+function afterMissing(st){ return ['moves', 'worth'].filter(f => !st.after[f]).map(f => 'a_' + f); }
+const sheetGroup = f => $(`#sBody [data-field="${f}"]`);
+function updateSheetButtons(){
+  const st = ans(slots[focusI].a.id);
+  const rb = $('#revealBtn'); if (rb){ const left = blindMissing(st).length; rb.classList.toggle('ghost', left > 0); rb.classList.toggle('primary', !left); $('#revealHint').textContent = left ? left + ' to go' : ''; }
+  const db = $('#doneBtn'); if (db){ const left = afterMissing(st).length; db.classList.toggle('ghost', left > 0); db.classList.toggle('primary', !left); $('#doneHint').textContent = left ? 'Rate both again' : ''; }
+}
+$('#sBody').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return; const s = slots[focusI]; const st = ans(s.a.id);
+  const grp = btn.closest('[data-field]');
+  if (grp){
+    const f = grp.dataset.field, raw = btn.dataset.v, v = /^\d$/.test(raw) ? +raw : raw;
+    if (f === 'reasons'){ const set = new Set(st.after.reasons || []); if (set.has(v)) set.delete(v); else { if (v === 'Nothing changed') set.clear(); else set.delete('Nothing changed'); set.add(v); } st.after.reasons = [...set]; $$('button', grp).forEach(x => x.setAttribute('aria-pressed', set.has(x.dataset.v))); }
+    else if (f.startsWith('a_')){ st.after[f.slice(2)] = v; $$('button', grp).forEach(x => x.setAttribute('aria-pressed', x === btn)); }
+    else { st.blind[f] = v; $$('button', grp).forEach(x => x.setAttribute('aria-pressed', x === btn)); }
+    grp.classList.remove('need'); saveState(); updateSheetButtons(); return;
+  }
+  if (btn.id === 'againVR'){ startVR(focusI); return; }
+  if (btn.id === 'open3D'){ open3D(); return; }
+  if (btn.id === 'revealBtn' && blindMissing(st).length){ flagMissing(blindMissing(st).map(sheetGroup)); return; }
+  if (btn.id === 'doneBtn' && afterMissing(st).length){ flagMissing(afterMissing(st).map(sheetGroup)); return; }
+  if (btn.id === 'revealBtn'){
+    st.stage = 'revealed'; st.seconds = Math.round((Date.now() - (st.openedAt || Date.now())) / 1000); st.position = ++state.seen; st.revealedAt = new Date().toISOString();
+    saveState(); sendRating(s, st); drawPlaque(s); renderSheetBody(); $('#sBody').scrollTop = 0; renderRoomUI();
+  }
+  if (btn.id === 'doneBtn'){
+    st.stage = 'done'; saveState(); sendRating(s, st); drawPlaque(s); renderRoomUI();
+    const nx = nextUnrated(focusI);
+    if (nx === -1 || nx === focusI){ exitFocus(); setTimeout(openFinal, REDUCED ? 0 : 700); } else focusSlot(nx);
+  }
+});
+function sendRating(s, st){
+  const a = s.a, b = st.blind, af = st.after;
+  enqueue('rating', {key:state.visitorId + ':' + a.id, visitorId:state.visitorId, artworkId:a.id, artworkNo:s.i + 1, title:a.title,
+    position:st.position, secondsLooking:st.seconds, beautiful:b.beautiful, original:b.original, moves:b.moves, worth:b.worth, guess:b.guess, confidence:b.confidence,
+    movesAfter:af.moves || '', worthAfter:af.worth || '', movesChange:af.moves ? af.moves - b.moves : '', worthChange:af.worth ? af.worth - b.worth : '',
+    reasons:(af.reasons || []).join('; '), stage:st.stage, kind:a.kind || 'image', vrSeconds:a.kind === 'vr' || a.kind === '3d' ? (st.vrSeconds || 0) : '', savedAt:new Date().toISOString()});
+}
+function stepPiece(dir){ const list = placed().map(s => s.i); const k = list.indexOf(focusI); if (k < 0) return; focusSlot(list[(k + dir + list.length) % list.length]); }
+$('#sPrev').onclick = () => stepPiece(-1); $('#sNext').onclick = () => stepPiece(1); $('#sClose').onclick = exitFocus;
+function toggleLook(){
+  collapsed = !collapsed; $('#sheet').classList.toggle('collapsed', collapsed); const b = $('#sLook'); b.setAttribute('aria-pressed', collapsed); b.textContent = collapsed ? 'Back to questions' : 'Look closer';
+  if (!collapsed){ zoom = 1; pan.set(0, 0); } markDirty();
+}
+$('#sLook').onclick = toggleLook;
+
+/* ---------------- index of pieces ---------------- */
+function openIndex(){
+  const list = placed(); const d = doneCount();
+  $('#iThumbs').innerHTML = list.map(s => { const st = state.answers[s.a.id] || {}; const src = thumbOf(s.a);
+    return `<button class="thumb" data-i="${s.i}">${src ? `<img src="${src}" alt="">` : '<span class="ph"></span>'}${st.stage === 'done' ? '<span class="badge" aria-label="rated">✓</span>' : ''}<b>${num(s.i)}</b><small>${esc(s.a.title || 'Untitled')}</small></button>`; }).join('');
+  $('#iActions').innerHTML = (d >= 3 && d < list.length && !state.finished) ? `<button class="btn" id="finishEarly">Done for now · finish with ${d} rated</button>` : (d >= list.length && list.length ? `<button class="btn primary" id="finishEarly">${state.finished ? 'See your results' : 'Finish'}</button>` : `<span class="fine">${d} of ${list.length} rated. Tap a piece to go to it.</span>`);
+  $('#index').hidden = false;
+}
+function closeIndex(){ $('#index').hidden = true; }
+$('#iClose').onclick = closeIndex;
+$('#index').addEventListener('click', e => { if (e.target === $('#index')) return closeIndex();
+  const t = e.target.closest('.thumb'); if (t){ closeIndex(); focusSlot(+t.dataset.i); return; }
+  if (e.target.closest('#finishEarly')){ closeIndex(); if (mode === 'focus') exitFocus(); openFinal(); } });
+
+/* ---------------- finish ---------------- */
+function results(){
+  const list = placed().filter(s => (state.answers[s.a.id] || {}).stage === 'done');
+  const by = {human:[0, 0], ai:[0, 0], both:[0, 0]}; let right = 0, big = null;
+  list.forEach(s => { const st = state.answers[s.a.id], m = s.a.reveal.maker; if (by[m]){ by[m][1]++; if (st.blind.guess === m){ by[m][0]++; right++; } }
+    const ch = (st.after.worth || 0) - (st.blind.worth || 0); if (!big || Math.abs(ch) > Math.abs(big.ch)) big = {s, ch}; });
+  return {n:list.length, right, by, big};
+}
+function openFinal(){
+  if (mode === 'focus') exitFocus();
+  const r = results(); const f = state.final || {};
+  const byHTML = `<div class="bymaker">${['human','ai','both'].map(m => `<div><span class="${MAKER[m].cls}">${MAKER[m].short}</span><b>${r.by[m][0]}/${r.by[m][1]}</b><span class="fine">spotted</span></div>`).join('')}</div>`;
+  const bigHTML = r.big && r.big.ch ? `<p class="fine">Biggest change: <b style="color:var(--fg)">${esc(r.big.s.a.title)}</b> went from ${state.answers[r.big.s.a.id].blind.worth} to ${state.answers[r.big.s.a.id].after.worth} on “worth paying for” after the reveal.</p>` : '';
+  if (state.finished){
+    $('#fCard').innerHTML = `<div class="eyebrow">Thank you${state.profile.name ? ', ' + esc(state.profile.name) : ''}</div><h2 id="fTitle" style="font-size:34px" class="glitch">You're on the guest list.</h2>
+      <div class="score"><b>${r.right}/${r.n}</b><span class="fine">pieces where you guessed the maker</span></div>${byHTML}${bigHTML}
+      <p class="fine">${state.profile.updates ? 'We’ll email you the findings when the project is done.' : 'Your answers are in. Thanks for helping with the research.'}</p>
+      <div class="actions"><button class="btn primary" id="fBack">Back to the room</button><button class="btn ghost" id="fNew">New visitor</button></div>
+      <div id="fNewConfirm" hidden class="actions"><span class="fine">Start a fresh pass on this phone?</span><button class="btn small primary" id="fNewYes">Yes, start over</button><button class="btn small" id="fNewNo">Cancel</button></div>`;
+  } else {
+    const list = placed().filter(s => (state.answers[s.a.id] || {}).stage === 'done');
+    $('#fCard').innerHTML = `<div class="eyebrow">Last few questions</div><h2 id="fTitle" style="font-size:34px">You rated ${r.n} piece${r.n === 1 ? '' : 's'}</h2>
+      <div class="score"><b>${r.right}/${r.n}</b><span class="fine">makers guessed right</span></div>${byHTML}${bigHTML}
+      <div class="field"><span class="qlabel" id="q-cover">Pick one piece for the next Glitch cover</span>
+        <div class="thumbs" role="group" aria-labelledby="q-cover" id="coverPick">${list.map(s => `<button class="thumb" type="button" data-v="${s.a.id}" aria-pressed="${f.cover === s.a.id}">${thumbOf(s.a) ? `<img src="${thumbOf(s.a)}" alt="">` : '<span class="ph"></span>'}<b>${num(s.i)}</b><small>${esc(s.a.title)}</small></button>`).join('')}</div></div>
+      ${segHTML('aiValue', 'In this room, did AI add value or take it away?', [['took a lot away','Took a lot away'],['took some away','Took some away'],['no difference','No difference'],['added some','Added some'],['added a lot','Added a lot']], f.aiValue)}
+      ${segHTML('labels', 'Should AI-made work always be labelled?', [['always','Always'],['only fully AI','Only when it’s fully AI'],['does not matter','It doesn’t matter']], f.labels)}
+      <label class="field"><span>What made a piece feel valuable to you? <small>(optional)</small></span><textarea class="input" id="fWhy" maxlength="600">${esc(f.why || '')}</textarea></label>
+      <p class="status err" id="fErr" role="alert"></p>
+      <div class="actions"><button class="btn primary" id="fSend">Send my answers</button><button class="btn ghost" id="fBack">Keep looking</button></div>`;
+  }
+  $('#final').hidden = false; $('#final').scrollTop = 0;
+}
+$('#final').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return; state.final ||= {};
+  const grp = btn.closest('[data-field]');
+  if (btn.closest('#coverPick')){ state.final.cover = btn.dataset.v; $$('#coverPick .thumb').forEach(x => x.setAttribute('aria-pressed', x === btn)); saveState(); return; }
+  if (grp){ state.final[grp.dataset.field] = btn.dataset.v; $$('button', grp).forEach(x => x.setAttribute('aria-pressed', x === btn)); grp.classList.remove('need'); saveState(); return; }
+  if (btn.id === 'fBack'){ $('#final').hidden = true; renderRoomUI(); }
+  if (btn.id === 'fSend'){
+    state.final.why = $('#fWhy').value.trim();
+    const miss = ['aiValue', 'labels'].filter(k => !state.final[k]);
+    if (miss.length){ $('#fErr').textContent = 'Answer the highlighted question' + (miss.length > 1 ? 's' : '') + ' to send.'; flagMissing(miss.map(k => $(`#fCard [data-field="${k}"]`))); return; }
+    const r = results(); const cover = placed().find(s => s.a.id === state.final.cover);
+    state.finished = true; saveState();
+    enqueue('visitor', {...visitorRow(), finished:'yes', finishedAt:new Date().toISOString(), piecesRated:r.n, guessedRight:r.right,
+      coverPick:cover ? (cover.i + 1) + ' · ' + cover.a.title : '', aiValue:state.final.aiValue, labels:state.final.labels, whyValuable:state.final.why});
+    renderRoomUI(); openFinal();
+  }
+  if (btn.id === 'fNew'){ $('#fNewConfirm').hidden = false; }
+  if (btn.id === 'fNewNo'){ $('#fNewConfirm').hidden = true; }
+  if (btn.id === 'fNewYes'){ resetVisit(); }
+});
+function resetVisit(){ markDirty(); doll.visible = false; act = null; target = null; vrWear(false); state = null; try { localStorage.removeItem(STATE); } catch(e){} $('#final').hidden = true; mode = 'intro'; closeSheet(); renderRoomUI(); slots.forEach(s => s && drawPlaque(s)); showWelcome(); }
+
+/* ---------------- welcome + guest pass ---------------- */
+function visitorRow(){ const p = state.profile;
+  return {visitorId:state.visitorId, startedAt:state.startedAt, name:p.name, email:p.email, age:p.age, field:p.field || p.role || '', status:p.status || '', aiUse:p.aiUse, aiFeel:p.aiFeel, consent:'yes', wantsFindings:p.updates ? 'yes' : 'no',
+    device:innerWidth < 760 ? 'phone' : 'large screen', startPiece:startPieceNo(), finished:state.finished ? 'yes' : 'no'}; }
+function startPieceNo(){ const order = placed().map(s => s.i); return order.length ? order[state.startOffset % order.length] + 1 : ''; }
+function showWelcome(){
+  $('#welcome').hidden = false; $('#pass').hidden = true; $('#hud').hidden = true; $('#roombar').hidden = true;
+  const n = artworks.length; const acts = $('#wActions');
+  $('#wTitle').textContent = CFG.ROOM_NAME; $('#wHouse').textContent = CFG.HOUSE_NAME; $('#wProject').textContent = CFG.PROJECT_LINE;
+  $('#wLede').textContent = (n ? (n === 12 ? 'Twelve' : n) + ' pieces hang' : 'Art will hang') + ' in this room. A person made some of them, AI made some, and some were made by both. Rate each piece first, then find out who made it.';
+  $('#wFacts').innerHTML = `<span>${n || 12} pieces</span><span>About ${Math.max(3, Math.round((n || 12) * .7))} minutes</span><span>Works on your phone</span>`;
+  if (!n){ acts.innerHTML = `<button class="btn primary" disabled>The room is being hung</button>`; $('#wStatus').textContent = 'No artworks yet. Come back soon.'; return; }
+  $('#wStatus').textContent = '';
+  if (state && state.profile){ acts.innerHTML = `<button class="btn primary" id="resumeBtn">Continue${state.profile.name ? ' as ' + esc(state.profile.name) : ''}</button><button class="btn ghost" id="overBtn">Not you? Start over</button>
+      <div class="actions" id="overConfirm" hidden><span class="fine">This clears the answers saved on this phone.</span><button class="btn small primary" id="overYes">Start over</button><button class="btn small" id="overNo">Cancel</button></div>`; }
+  else acts.innerHTML = `<button class="btn primary" id="startBtn">Get your guest pass</button>`;
+}
+$('#welcome').addEventListener('click', e => {
+  const id = (e.target.closest('button') || {}).id;
+  if (id === 'startBtn'){ $('#welcome').hidden = true; $('#pass').hidden = false; $('#pName').focus(); }
+  if (id === 'resumeBtn') enterRoom();
+  if (id === 'overBtn') $('#overConfirm').hidden = false;
+  if (id === 'overNo') $('#overConfirm').hidden = true;
+  if (id === 'overYes') resetVisit();
+  if (id === 'retryBtn') boot();
+});
+const pass = {age:'', field:'', status:'', aiUse:'', aiFeel:0, doll:0};
+DOLLS.forEach((d, i) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.i = i; b.setAttribute('aria-label', 'Doll ' + d.name); b.setAttribute('aria-pressed', String(i === 0));
+  b.style.background = `linear-gradient(180deg,${hex(d.hair)} 0 35%,${hex(d.skin)} 35% 55%,${hex(d.dress)} 55%)`; $('#dollPick').appendChild(b); });
+$('#dollPick').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; pass.doll = +b.dataset.i; $$('#dollPick button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); setDoll(pass.doll); });
+$('#passForm').addEventListener('click', e => { const btn = e.target.closest('[data-field] button'); if (!btn) return; const grp = btn.closest('[data-field]'); const v = btn.dataset.v;
+  pass[grp.dataset.field] = /^\d$/.test(v) ? +v : v; $$('button', grp).forEach(x => x.setAttribute('aria-pressed', x === btn)); grp.classList.remove('need'); });
+$('#passBack').onclick = () => { $('#pass').hidden = true; $('#welcome').hidden = false; };
+if (CFG.CONTACT_EMAIL){ const c = $('#pContact'); c.hidden = false; c.textContent = 'Questions, or want your data deleted? Email ' + CFG.CONTACT_EMAIL; }
+$('#passGo').addEventListener('click', submitPass);
+$$('#pName,#pEmail').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); submitPass(); } }));
+function submitPass(){
+  const err = $('#pErr'); const email = $('#pEmail').value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ err.textContent = 'Add a valid email so we can link your answers.'; flagMissing([$('#pEmail')]); $('#pEmail').focus(); return; }
+  const missing = ['age', 'field', 'status', 'aiUse', 'aiFeel'].filter(k => !pass[k]);
+  if (missing.length){ err.textContent = 'Answer the highlighted questions to get your pass.'; flagMissing(missing.map(k => $(`#passForm [data-field="${k}"]`))); return; }
+  if (!$('#pConsent').checked){ err.textContent = 'Tick the consent box to continue.'; flagMissing([$('#pConsent').closest('.check')]); return; }
+  err.textContent = '';
+  newVisit({name:$('#pName').value.trim(), email, age:pass.age, field:pass.field, status:pass.status, aiUse:pass.aiUse, aiFeel:pass.aiFeel, doll:pass.doll, updates:$('#pUpdates').checked});
+  enqueue('visitor', visitorRow());
+  enterRoom();
+}
+function enterRoom(){
+  setDoll(state.profile.doll || 0);
+  $('#welcome').hidden = true; $('#pass').hidden = true; mode = 'room'; slots.forEach(s => s && drawPlaque(s)); enterRoomCamera(); renderRoomUI(); showCoach();
+}
+$('#curatorLink').onclick = () => openCurator();
+
+/* ---------------- curator ---------------- */
+let pin = ''; try { pin = sessionStorage.getItem('pink-salon-pin') || ''; } catch(e){}
+let curStats = null, drafts = {};
+const cur = $('#cWrap');
+function siteUrl(){ return location.href.split('#')[0]; }
+function openCurator(){ $('#curator').hidden = false; try { if (location.hash !== '#curator') history.replaceState(null, '', '#curator'); } catch(e){} renderCurator(); if (pin || !LIVE) refreshStats(); }
+function closeCurator(){ $('#curator').hidden = true; try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} }
+async function refreshStats(){ try { curStats = await api.stats(pin); renderCurHead(); } catch(e){ if (String(e.message).includes('pin')){ pin = ''; renderCurator(); } } }
+function renderCurator(){
+  if (LIVE && !pin){
+    cur.innerHTML = `<div class="card" style="justify-self:center;margin-top:8vh"><div class="eyebrow">Curator</div><h1 id="cTitle" style="font-size:36px">Unlock the salon</h1>
+      <p class="fine">Enter the curator PIN you set in the Google Apps Script.</p>
+      <div id="pinForm" class="actions"><input class="input" id="pinIn" type="password" inputmode="text" autocomplete="current-password" style="flex:1;min-width:160px" aria-label="Curator PIN"><button class="btn primary" type="button" id="pinGo">Unlock</button></div>
+      <p class="status err" id="pinErr" role="alert"></p><div class="actions"><button class="btn ghost" id="cClose">Back to the room</button></div></div>`;
+    $('#pinIn').focus(); return;
+  }
+  cur.innerHTML = `<div class="cur-head" id="cHead"></div>
+    ${LIVE ? '' : `<div class="card" style="width:100%;max-width:none"><div class="eyebrow">Preview mode</div><h2 style="font-size:24px">Connect your Google Sheet to go live</h2>
+      <p class="fine">Right now uploads and answers stay in this browser. To collect answers and emails from visitors' phones:</p>
+      <ol class="steps"><li>Make a new Google Sheet, then open <b>Extensions › Apps Script</b>. Paste in <code>Code.gs</code> and change <code>CURATOR_PIN</code> on the first line.</li>
+      <li>Pick <code>setup</code> in the function menu and press <b>Run</b>. Allow access (Google warns because it's your own script: Advanced › Go to project).</li>
+      <li><b>Deploy › New deployment › Web app</b>. Execute as: Me. Who has access: Anyone. Copy the web app URL.</li>
+      <li>Paste that URL into <code>SHEET_URL</code> at the top of <code>index.html</code>.</li>
+      <li>Upload <code>index.html</code> to a GitHub repo and turn on <b>Settings › Pages</b>. Your link is <code>username.github.io/repo</code>.</li>
+      <li>Open the link, tap <b>Curator</b>, enter your PIN and upload your 12 pieces. Then grab the QR code below.</li></ol></div>`}
+    <div class="slots" id="cSlots"></div>
+    <div class="card" style="width:100%;max-width:none"><div class="eyebrow">For the exhibition</div><h2 style="font-size:24px">QR code</h2>
+      <div class="qrbox"><canvas id="qr" width="264" height="264" aria-label="QR code for the salon link"></canvas><span class="urlline" id="qrUrl"></span>
+      <div class="actions"><button class="btn small" id="qrCopy">Copy link</button>${LIVE ? '<a class="btn small" id="qrSave" download="pink-salon-qr.png">Save QR as PNG</a>' : ''}</div>
+      ${LIVE ? '' : '<p class="fine">This QR points at the preview. Once it’s on GitHub Pages, open Curator there to get the real one.</p>'}</div></div>`;
+  renderCurHead(); renderSlots(); drawQR();
+}
+function renderCurHead(){
+  const h = $('#cHead'); if (!h) return; const s = curStats;
+  h.innerHTML = `<div style="display:grid;gap:6px"><div class="eyebrow">Curator · ${LIVE ? 'connected to your Google Sheet' : 'preview'}</div><h1 id="cTitle">${esc(CFG.ROOM_NAME)}</h1></div>
+    <div class="cur-stats">${s ? `<span class="pill"><b>${s.visitors}</b> visitors</span><span class="pill"><b>${s.finished}</b> finished</span><span class="pill"><b>${s.ratings}</b> ratings</span>` : ''}
+    ${s && s.sheetUrl ? `<a class="btn small" href="${esc(s.sheetUrl)}" target="_blank" rel="noopener">Open answers sheet</a>` : ''}
+    <button class="btn small" id="cRefresh">Refresh</button><button class="btn small primary" id="cClose">View the room</button></div>`;
+}
+function slotCard(i){
+  const a = artworks[i], d = drafts[i] || {};
+  if (a && a.builtin) return `<article class="slot" data-i="${i}"><div class="slot-no"><b>${num(i)}</b><span>${WALL(i)}</span></div>
+    <div class="drop has" style="cursor:default">${thumbOf(a) ? `<img src="${thumbOf(a)}" alt="">` : ''}</div>
+    <p class="fine"><b>${esc(a.title)}</b> · ${a.kind === 'vr' ? 'VR' : '3D and AR'} piece built into the page. It always hangs here, so you have ${SLOTS - BUILT_IN.length} places for your own pieces.</p></article>`;
+  const v = k => d[k] !== undefined ? d[k] : (a ? (k in (a.reveal || {}) ? a.reveal[k] : a[k]) : '');
+  const img = d.image ? d.image.data : (a ? thumbOf(a) : '');
+  const has = !!(a || d.image); const maker = v('maker');
+  return `<article class="slot" data-i="${i}">
+    <div class="slot-no"><b>${num(i)}</b><span>${WALL(i)}</span></div>
+    <label class="drop ${img ? 'has' : ''}">${img ? `<img src="${img}" alt="">` : `<span>${a ? 'Loading image…' : 'Add artwork<br><small>JPG or PNG</small>'}</span>`}${img ? '<span class="replace">Replace image</span>' : ''}<input type="file" accept="image/*" data-act="file" aria-label="Choose image for ${num(i)}"></label>
+    ${has ? `<label class="field"><span>Title <small>(shown before the reveal, so don't give it away)</small></span><input class="input" data-k="title" value="${esc(v('title'))}" maxlength="80"></label>
+    <div class="field"><span class="qlabel">Made by</span><div class="seg makerseg" data-k="maker">${[['human','Human'],['ai','AI'],['both','Both']].map(([m, t]) => `<button type="button" data-v="${m}" aria-pressed="${maker === m}">${t}</button>`).join('')}</div></div>
+    <div class="field"><span class="qlabel">Type</span><div class="seg" data-k="kind">${[['image','Image'],['vr','VR · 360° image']].map(([k, t]) => `<button type="button" data-v="${k}" aria-pressed="${(v('kind') || 'image') === k}">${t}</button>`).join('')}</div>
+      <small class="fine">VR pieces get the glasses stand. Upload a 360° panorama, twice as wide as tall.</small></div>
+    <label class="field"><span>Credit <small>(after the reveal)</small></span><input class="input" data-k="credit" value="${esc(v('credit'))}" maxlength="120" placeholder="e.g. Maya, with Midjourney"></label>
+    <label class="field"><span>How it was made <small>(after the reveal)</small></span><textarea class="input" data-k="how" maxlength="400" placeholder="e.g. Sketched by hand, colours generated in Firefly">${esc(v('how'))}</textarea></label>
+    <label class="field"><span>Time it took <small>(after the reveal)</small></span><input class="input" data-k="time" value="${esc(v('time'))}" maxlength="60" placeholder="e.g. 6 hours, 40 seconds"></label>
+    <div class="row"><button class="btn small primary" data-act="save">Save</button>${a ? `<button class="btn small" data-act="up" aria-label="Move ${num(i)} earlier" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn small" data-act="down" aria-label="Move ${num(i)} later" ${!artworks[i + 1] || artworks[i + 1].builtin ? 'disabled' : ''}>↓</button><button class="btn small ghost" data-act="del">Remove</button>` : (d.image ? '<button class="btn small ghost" data-act="discard">Discard</button>' : '')}<span class="msg" data-msg></span></div>
+    <div class="row" data-confirm hidden><span class="fine">Remove this piece from the room?</span><button class="btn small primary" data-act="delYes">Remove</button><button class="btn small" data-act="delNo">Keep</button></div>` : ''}
+  </article>`;
+}
+function renderSlots(){ const box = $('#cSlots'); if (!box) return; const n = Math.min(SLOTS, Math.max(artworks.length + 1, SLOTS)); box.innerHTML = Array.from({length:n}, (_, i) => slotCard(i)).join(''); }
+function slotMsg(i, text, cls = ''){ const m = $(`.slot[data-i="${i}"] [data-msg]`); if (m){ m.textContent = text; m.className = 'msg ' + cls; } }
+function readDraft(i){
+  const card = $(`.slot[data-i="${i}"]`); const d = drafts[i] ||= {};
+  $$('[data-k]', card).forEach(el => { if (el.classList.contains('seg')){ const on = $('[aria-pressed="true"]', el); if (on) d[el.dataset.k] = on.dataset.v; } else d[el.dataset.k] = el.value.trim(); });
+  return d;
+}
+function resizeImage(file){
+  return new Promise((res, rej) => { const fr = new FileReader(); fr.onerror = () => rej(new Error('Could not read the file'));
+    fr.onload = () => { const img = new Image(); img.onerror = () => rej(new Error('That file isn’t an image this browser can open. Try a JPG or PNG.'));
+      img.onload = () => { const wide = img.width / img.height > 1.8 && img.width / img.height < 2.2; const max = wide ? 4096 : 1600, k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        const g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        res({data:c.toDataURL('image/jpeg', .86), w:c.width, h:c.height}); }; img.src = fr.result; }; fr.readAsDataURL(file); });
+}
+cur.addEventListener('keydown', e => { if (e.target.id === 'pinIn' && e.key === 'Enter'){ e.preventDefault(); unlockCurator(); } });
+async function unlockCurator(){ const p = $('#pinIn').value.trim(); if (!p){ $('#pinErr').textContent = 'Enter your PIN.'; return; }
+  $('#pinErr').textContent = 'Checking…'; try { await api.checkPin(p); pin = p; try { sessionStorage.setItem('pink-salon-pin', p); } catch(er){} renderCurator(); refreshStats(); }
+  catch(er){ $('#pinErr').textContent = /pin/i.test(er.message) ? (er.message.includes('change') ? 'Set your own CURATOR_PIN in Code.gs first, then deploy a new version.' : 'That PIN doesn’t match.') : 'Couldn’t reach your Google Sheet. Check SHEET_URL and the deployment access (Anyone).'; } }
+cur.addEventListener('change', async e => {
+  if (e.target.dataset.act !== 'file') return; const card = e.target.closest('.slot'); const i = +card.dataset.i; const file = e.target.files[0]; if (!file) return;
+  readDraft(i); slotMsg(i, 'Preparing image…');
+  try { const im = await resizeImage(file); drafts[i] = {...(drafts[i] || {}), image:im}; card.outerHTML = slotCard(i); slotMsg(i, 'Not saved yet'); }
+  catch(er){ slotMsg(i, er.message, 'err'); }
+});
+cur.addEventListener('click', async e => {
+  const btn = e.target.closest('button,a'); if (!btn) return;
+  if (btn.id === 'pinGo'){ unlockCurator(); return; }
+  if (btn.id === 'cClose'){ closeCurator(); if (mode === 'intro') showWelcome(); return; }
+  if (btn.id === 'cRefresh'){ refreshStats(); await reloadArtworks(); return; }
+  if (btn.id === 'qrCopy'){ try { await navigator.clipboard.writeText(siteUrl()); toast('Link copied'); } catch(er){ const r = document.createRange(); r.selectNodeContents($('#qrUrl')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Link selected · copy it'); } return; }
+  const card = btn.closest('.slot'); if (!card) return; const i = +card.dataset.i; const a = artworks[i];
+  const seg = btn.closest('.seg[data-k]'); if (seg){ $$('button', seg).forEach(x => x.setAttribute('aria-pressed', x === btn)); readDraft(i); return; }
+  const act = btn.dataset.act;
+  if (act === 'discard'){ delete drafts[i]; card.outerHTML = slotCard(i); return; }
+  if (act === 'del'){ $('[data-confirm]', card).hidden = false; return; }
+  if (act === 'delNo'){ $('[data-confirm]', card).hidden = true; return; }
+  if (act === 'delYes'){ slotMsg(i, 'Removing…'); try { await api.deleteArtwork(pin, a.id); delete drafts[i]; await reloadArtworks(); toast('Removed'); } catch(er){ slotMsg(i, 'Couldn’t remove: ' + er.message, 'err'); } return; }
+  if (act === 'up' || act === 'down'){ const j = act === 'up' ? i - 1 : i + 1; if (!artworks[j] || artworks[j].builtin) return; const ids = artworks.filter(x => !x.builtin).map(x => x.id); [ids[i], ids[j]] = [ids[j], ids[i]];
+    slotMsg(i, 'Moving…'); try { await api.reorder(pin, ids); const dd = drafts[i]; drafts[i] = drafts[j]; drafts[j] = dd; await reloadArtworks(); } catch(er){ slotMsg(i, 'Couldn’t move: ' + er.message, 'err'); } return; }
+  if (act === 'save'){
+    const d = readDraft(i);
+    if (!d.title){ slotMsg(i, 'Add a title.', 'err'); return; } if (!d.maker){ slotMsg(i, 'Pick who made it.', 'err'); return; }
+    if (!a && !d.image){ slotMsg(i, 'Add an image.', 'err'); return; }
+    btn.disabled = true; slotMsg(i, d.image ? 'Uploading…' : 'Saving…');
+    try {
+      const img = d.image ? {data:d.image.data.split(',')[1], mime:'image/jpeg'} : null;
+      const saved = await api.saveArtwork(pin, {id:a ? a.id : '', title:d.title, kind:d.kind || (a && a.kind) || 'image', maker:d.maker, credit:d.credit || '', how:d.how || '', time:d.time || '', w:d.image ? d.image.w : (a && a.w), h:d.image ? d.image.h : (a && a.h)}, img ? (LIVE ? img : {data:d.image.data}) : null);
+      if (d.image) imageCache.set(saved.id + ':' + saved.updated, toObjectURL(d.image.data));
+      delete drafts[i]; await reloadArtworks(); slotMsg(i, 'Saved ✓', 'ok'); refreshStats();
+    } catch(er){ btn.disabled = false; slotMsg(i, /pin/i.test(er.message) ? 'PIN rejected. Reopen Curator and unlock again.' : 'Couldn’t save: ' + er.message, 'err'); }
+  }
+});
+let qrLib = null;
+function loadQR(){ if (qrLib) return qrLib; qrLib = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; s.onload = () => res(window.qrcode); s.onerror = rej; document.head.appendChild(s); }); return qrLib; }
+async function drawQR(){
+  const c = $('#qr'); if (!c) return; const url = siteUrl(); $('#qrUrl').textContent = url;
+  try { const qrcode = await loadQR(); const q = qrcode(0, 'M'); q.addData(url); q.make(); const n = q.getModuleCount(), cell = Math.floor(c.width / (n + 4)), off = Math.floor((c.width - cell * n) / 2); const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#141016'; for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) g.fillRect(off + x * cell, off + y * cell, cell, cell);
+    const a = $('#qrSave'); if (a) a.href = c.toDataURL('image/png'); }
+  catch(e){ const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#141016'; g.font = '14px monospace'; g.fillText('QR unavailable', 70, 132); }
+}
+
+/* ---------------- boot ---------------- */
+async function reloadArtworks(){
+  const list = await api.artworks(); artworks = withBuiltIn(list);
+  await Promise.all(artworks.map(async a => { try { await imageURL(a); } catch(e){} }));
+  hangAll(); if (!$('#curator').hidden) renderSlots(); if (mode === 'intro' && !$('#welcome').hidden) showWelcome(); renderRoomUI();
+}
+async function boot(){
+  $('#wDemo').hidden = LIVE; $('#hudHouse').textContent = CFG.HOUSE_NAME; $('#hudRoom').textContent = CFG.ROOM_NAME;
+  $('#wActions').innerHTML = '<button class="btn primary" disabled>Hanging the art…</button>'; $('#wStatus').textContent = '';
+  try {
+    const list = await api.artworks(); artworks = withBuiltIn(list);
+    hangAll().then(() => { if (!$('#curator').hidden) renderSlots(); });
+    showWelcome(); flush();
+    if (location.hash === '#curator') openCurator();
+  } catch(e){
+    console.error(e); for (let i = 0; i < SLOTS; i++) if (!slots[i]) buildSlot(i, null);
+    $('#wActions').innerHTML = '<button class="btn primary" id="retryBtn">Try again</button>';
+    $('#wStatus').textContent = 'Couldn’t reach the room. Check your connection and try again.'; $('#wStatus').classList.add('err');
+  }
+}
+addEventListener('hashchange', () => { if (location.hash === '#curator' && $('#curator').hidden) openCurator(); });
+boot();
+document.fonts && document.fonts.ready.then(() => slots.forEach(s => s && drawPlaque(s)));
+</script>
+
+</body></html>
