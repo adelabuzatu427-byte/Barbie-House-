@@ -234,6 +234,8 @@ textarea.input{min-height:72px;resize:vertical;line-height:1.45}
 .dollpick{display:flex;gap:10px;flex-wrap:wrap}
 .dollpick button{width:40px;height:54px;border-radius:20px 20px 9px 9px;border:2px solid transparent;padding:0}
 .dollpick button[aria-pressed="true"]{border-color:#fff3f7;box-shadow:0 0 0 3px var(--pink)}
+.dollpick button.m{border-radius:13px 13px 7px 7px}
+.dollpick .dollbreak{flex-basis:100%;height:0;margin:-5px 0}
 .vrnote{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--cyan);border-radius:14px;padding:10px 12px;font-size:12.5px}
 
 .view3d{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;background:var(--ink)}
@@ -294,6 +296,8 @@ textarea.input{min-height:72px;resize:vertical;line-height:1.45}
     </div>
     <div class="field"><span class="qlabel" id="lAge">Age</span><div class="seg" data-field="age" aria-labelledby="lAge">
       <button type="button" data-v="18-24">18–24</button><button type="button" data-v="25-34">25–34</button><button type="button" data-v="35-44">35–44</button><button type="button" data-v="45+">45+</button></div></div>
+    <div class="field"><span class="qlabel" id="lSex">Sex</span><div class="seg" data-field="sex" aria-labelledby="lSex">
+      <button type="button" data-v="female">Female</button><button type="button" data-v="male">Male</button><button type="button" data-v="other">Other</button><button type="button" data-v="prefer not to say">Prefer not to say</button></div></div>
     <div class="field"><span class="qlabel" id="lField">What's your field?</span><div class="seg" data-field="field" aria-labelledby="lField">
       <button type="button" data-v="fashion">Fashion</button><button type="button" data-v="design">Design</button><button type="button" data-v="art and photography">Art &amp; photography</button>
       <button type="button" data-v="tech">Tech</button><button type="button" data-v="business and marketing">Business &amp; marketing</button><button type="button" data-v="other">Something else</button></div></div>
@@ -1219,6 +1223,11 @@ const DOLLS = [
   {name:'Sky',   dress:0x5fbff2, hair:0x3a2216, skin:0xc68a5e, eye:0x6b3e1e, lip:0xb8505a, style:'pony'},
   {name:'Lilac', dress:0xb18cff, hair:0x17110f, skin:0x8a573a, eye:0x3a2214, lip:0x9a3d52, style:'curls'},
   {name:'Pearl', dress:0xfff1f5, hair:0xd9623a, skin:0xf7dac6, eye:0x3e8a5a, lip:0xe0607a, style:'bob'},
+  // the male dolls: the same four skin tones, short hair, a T-shirt (the "dress" colour), trousers and flat trainers
+  {name:'Ocean',  male:true, dress:0x2fc4c9, pants:0xfff4f8, hair:0xf0cc6a, skin:0xf3c9ab, eye:0x3f8fd8, lip:0xd99e88, style:'quiff'},
+  {name:'Cherry', male:true, dress:0xff4fa3, pants:0x2b3a8f, hair:0x3a2216, skin:0xc68a5e, eye:0x6b3e1e, lip:0xb0705a, style:'short'},
+  {name:'Sun',    male:true, dress:0xffd23f, pants:0x24202c, hair:0x17110f, skin:0x8a573a, eye:0x3a2214, lip:0x784232, style:'crop'},
+  {name:'Violet', male:true, dress:0x7b3fe4, pants:0xf1e4d6, hair:0xd9623a, skin:0xf7dac6, eye:0x3e8a5a, lip:0xe2a896, style:'swept'},
 ];
 const DM = {
   skin:new THREE.MeshPhysicalMaterial({roughness:.5, sheen:.4, sheenRoughness:.6, sheenColor:new THREE.Color(0xffd0c0)}),
@@ -1227,7 +1236,9 @@ const DM = {
   shoe:mStd(0xe0558f, .22), white:new THREE.MeshStandardMaterial({color:0xffffff, roughness:.25}), iris:new THREE.MeshStandardMaterial({roughness:.2}),
   pupil:new THREE.MeshBasicMaterial({color:0x0c0a0c}), shine:new THREE.MeshBasicMaterial({color:0xffffff}), lash:new THREE.MeshStandardMaterial({color:0x1a1014, roughness:.6}),
   lip:new THREE.MeshStandardMaterial({roughness:.3}), blush:new THREE.MeshBasicMaterial({color:0xff6f8e, transparent:true, opacity:.28, depthWrite:false}),
+  pants:new THREE.MeshPhysicalMaterial({roughness:.6, sheen:.4, sheenRoughness:.5, sheenColor:new THREE.Color(0xffffff)}), kick:mStd(0xfbf6f8, .45),
 };
+const FEM = [], MAS = [], BROWS = [];   // parts only the female dolls wear, parts only the male dolls wear, and the brows (thicker on the male dolls)
 function limbGeo(r1, r2, len, seg = 16){ const pts = [], n = 6;
   for (let i = n; i >= 0; i--){ const a = PI / 2 + i / n * PI / 2; pts.push(new THREE.Vector2(Math.max(1e-4, r2 * Math.sin(a)), -len + r2 * Math.cos(a))); }
   for (let i = 0; i <= n; i++){ const a = PI / 2 - i / n * PI / 2; pts.push(new THREE.Vector2(Math.max(1e-4, r1 * Math.sin(a)), r1 * Math.cos(a))); }
@@ -1248,9 +1259,15 @@ const TORSO = [[0.0001,-.06],[.09,-.05],[.125,-.01],[.13,.04],[.115,.12],[.095,.
   const sk = [[.31,-.40],[.27,-.28],[.21,-.12],[.155,.02],[.128,.1],[.108,.17]].map(p => new THREE.Vector2(p[0], p[1])); const sg = new THREE.LatheGeometry(sk, 48); const pp = sg.attributes.position;
   for (let i = 0; i < pp.count; i++){ const x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i); const a = Math.atan2(z, x), k = clamp((.1 - y) / .5, 0, 1), f = 1 + .07 * k * Math.sin(a * 9) + .025 * k * Math.sin(a * 17 + 1); pp.setX(i, x * f); pp.setZ(i, z * f * .86); }
   sg.computeVertexNormals(); J.skirt = Dm(sg, DM.dress, J.hips);
-  Dm(cyl(.034, .038, .12, 14), DM.skin, J.chest, 0, .05, 0);
-  for (const s of ['shN','shP']) Dm(sph(.042, 14, 10), DM.skin, J[s]);
-  const bw = G(); bw.position.set(0, .16, -.1); J.spine.add(bw); for (const s of [-1, 1]){ const l = Dm(sph(.04, 12, 8), DM.dress, bw, s * .04, 0, 0); l.scale.set(1.1, .7, .4); } Dm(sph(.018, 8, 6), DM.dress, bw); }
+  J.neck = Dm(cyl(.034, .038, .12, 14), DM.skin, J.chest, 0, .05, 0);
+  for (const s of ['shN','shP']) FEM.push(Dm(sph(.042, 14, 10), DM.skin, J[s]));
+  const bw = G(); bw.position.set(0, .16, -.1); J.spine.add(bw); for (const s of [-1, 1]){ const l = Dm(sph(.04, 12, 8), DM.dress, bw, s * .04, 0, 0); l.scale.set(1.1, .7, .4); } Dm(sph(.018, 8, 6), DM.dress, bw);
+  FEM.push(b, pel, J.skirt, bw);
+  // the male dolls: a T-shirt over a broader chest, short sleeves, and trousers
+  const SHIRT = [[.136,-.075],[.136,-.01],[.133,.04],[.126,.12],[.124,.2],[.132,.27],[.148,.34],[.156,.39],[.158,.43],[.135,.462],[.098,.482],[.075,.49]];
+  const shirt = Dm(new THREE.LatheGeometry(SHIRT.map(p => new THREE.Vector2(p[0], p[1])), 28), DM.dress, J.spine); shirt.scale.z = .74;
+  const pelM = Dm(sph(.13, 20, 14), DM.pants, J.hips); pelM.scale.set(1.0, .74, .7);   // stays inside the shirt hem
+  MAS.push(shirt, pelM); for (const s of ['shN','shP']){ const sl = Dm(limbGeo(.043, .039, .13), DM.dress, J[s]); sl.scale.y = .72; MAS.push(sl); } }   // short sleeves, flattened so the shoulder doesn't puff
 for (const s of ['N','P']){ const sx = s === 'N' ? -1 : 1;
   Dm(limbGeo(.032, .026, .25), DM.skin, J['sh' + s]); Dm(limbGeo(.026, .02, .22), DM.skin, J['el' + s]);
   const h = Dm(sph(.03, 12, 10), DM.skin, J['el' + s], 0, -.25, .005); h.scale.set(.6, 1.15, .38); const f = Dm(sph(.026, 10, 8), DM.skin, J['el' + s], 0, -.285, .008); f.scale.set(.55, 1.05, .3);
@@ -1258,8 +1275,12 @@ for (const s of ['N','P']){ const sx = s === 'N' ? -1 : 1;
 for (const s of ['N','P']){
   Dm(limbGeo(.062, .043, THI), DM.skin, J['th' + s]); Dm(limbGeo(.042, .026, SHN), DM.skin, J['kn' + s]);
   const a = J['an' + s]; const top = Dm(rbox(.05, .04, .11), DM.skin, a, 0, -.03, .03); top.rotation.x = .55;
-  const sh = Dm(rbox(.062, .04, .15), DM.shoe, a, 0, -.058, .05); sh.rotation.x = .42; Dm(cyl(.007, .011, .075, 8), DM.shoe, a, 0, -.042, -.025);
-  const strap = Dm(new THREE.TorusGeometry(.028, .006, 6, 16), DM.shoe, a, 0, -.03, 0); strap.rotation.x = PI / 2; }
+  const sh = Dm(rbox(.062, .04, .15), DM.shoe, a, 0, -.058, .05); sh.rotation.x = .42; const heel = Dm(cyl(.007, .011, .075, 8), DM.shoe, a, 0, -.042, -.025);
+  const strap = Dm(new THREE.TorusGeometry(.028, .006, 6, 16), DM.shoe, a, 0, -.03, 0); strap.rotation.x = PI / 2;
+  FEM.push(top, sh, heel, strap);
+  // male dolls: trouser legs and flat trainers (the thick sole stands where the heels do)
+  MAS.push(Dm(limbGeo(.069, .055, THI), DM.pants, J['th' + s]), Dm(limbGeo(.055, .045, SHN - .01), DM.pants, J['kn' + s]),
+    Dm(rbox(.072, .066, .17), DM.kick, a, 0, -.04, .035), Dm(rbox(.078, .024, .178), DM.shoe, a, 0, -.07, .035)); }
 { const hg = sph(.112, 36, 28); const p = hg.attributes.position; for (let i = 0; i < p.count; i++){ const y = p.getY(i); if (y < 0){ const k = 1 - .2 * (-y / .112); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * (1 - .08 * (-y / .112))); } } hg.computeVertexNormals();
   const hm = Dm(hg, DM.skin, J.head, 0, .12, 0); hm.scale.set(.92, 1.07, .97);
   const F = G(); F.position.set(0, .12, 0); J.head.add(F);
@@ -1267,16 +1288,16 @@ for (const s of ['N','P']){
     const ew = Dm(sph(.021, 16, 12), DM.white, F, x, .006, .093); ew.scale.set(1.25, .82, .5);
     Dm(new THREE.CircleGeometry(.0125, 24), DM.iris, F, x, .006, .1042); Dm(new THREE.CircleGeometry(.0058, 16), DM.pupil, F, x, .006, .1046); Dm(new THREE.CircleGeometry(.0032, 10), DM.shine, F, x + .004, .011, .105);
     const l = Dm(new THREE.TorusGeometry(.024, .0032, 6, 16, PI), DM.lash, F, x, .006, .097); l.scale.set(1.1, .62, 1); l.rotation.z = s * .06;
-    const w = Dm(cyl(.002, .0005, .018, 4), DM.lash, F, x + s * .028, .016, .094); w.rotation.z = -s * 1.0;
-    const b = Dm(cyl(.0035, .0025, .04, 6), DM.lash, F, x + s * .002, .038, .1); b.rotation.z = PI / 2 + s * .18;
-    const ck = Dm(new THREE.CircleGeometry(.021, 20), DM.blush, F, s * .058, -.03, .094); ck.rotation.y = s * .5;
+    const w = Dm(cyl(.002, .0005, .018, 4), DM.lash, F, x + s * .028, .016, .094); w.rotation.z = -s * 1.0; FEM.push(w);
+    const b = Dm(cyl(.0035, .0025, .04, 6), DM.lash, F, x + s * .002, .038, .1); b.rotation.z = PI / 2 + s * .18; BROWS.push(b);
+    const ck = Dm(new THREE.CircleGeometry(.021, 20), DM.blush, F, s * .058, -.03, .094); ck.rotation.y = s * .5; FEM.push(ck);
     const ear = Dm(sph(.02, 10, 8), DM.skin, F, s * .103, -.004, -.006); ear.scale.set(.45, 1, .8); }
   const n = Dm(sph(.011, 10, 8), DM.skin, F, 0, -.02, .106); n.scale.set(.9, 1, .8);
-  const ul = Dm(sph(.017, 14, 10), DM.lip, F, 0, -.051, .098); ul.scale.set(1.3, .38, .52); const ll = Dm(sph(.016, 14, 10), DM.lip, F, 0, -.061, .097); ll.scale.set(1.2, .46, .56); }
+  const ul = Dm(sph(.017, 14, 10), DM.lip, F, 0, -.051, .098); ul.scale.set(1.3, .38, .52); const ll = Dm(sph(.016, 14, 10), DM.lip, F, 0, -.061, .097); ll.scale.set(1.2, .46, .56); J.lips = [ul, ll]; }
 const hairG = G(); J.head.add(hairG);
 function buildHair(style){
   hairG.clear(); J.pony = null; const Hm = DM.hair; const r = rng(77);
-  const cap = Dm(new THREE.SphereGeometry(.122, 36, 20, 0, PI * 2, 0, PI * .56), Hm, hairG, 0, .128, -.006); cap.scale.set(.97, 1.08, 1.02); cap.rotation.x = style === 'pony' ? -.18 : -.3;
+  const cap = Dm(new THREE.SphereGeometry(.122, 36, 20, 0, PI * 2, 0, PI * .56), Hm, hairG, 0, .128, -.006); cap.scale.set(.97, 1.08, 1.02); cap.rotation.x = style === 'pony' ? -.18 : ['quiff','short','crop','swept'].includes(style) ? -.55 : -.3;   // short cuts: higher hairline at the front
   if (style === 'long'){ const c = Dm(new THREE.CylinderGeometry(.122, .148, .5, 32, 1, true, PI * .3, PI * 1.4), Hm, hairG, 0, -.08, -.012); c.rotation.x = .06;
     const bg = Dm(sph(.1, 20, 12), Hm, hairG, .03, .205, .062); bg.scale.set(1.05, .36, .55); bg.rotation.z = -.35; }
   if (style === 'pony'){ Dm(new THREE.TorusGeometry(.028, .012, 8, 16), DM.dress, hairG, 0, .238, -.085).rotation.x = 1.0;
@@ -1286,9 +1307,19 @@ function buildHair(style){
       Dm(sph(.05 + r() * .025, 12, 10), Hm, hairG, v.x * .15, .13 + v.y * .15, v.z * .14 - .01); } }
   if (style === 'bob'){ Dm(new THREE.CylinderGeometry(.126, .142, .19, 32, 1, true, PI * .27, PI * 1.46), Hm, hairG, 0, .045, -.005);
     Dm(new THREE.CylinderGeometry(.124, .126, .06, 32, 1, true, -.95, 1.9), Hm, hairG, 0, .175, .006); }
+  // short styles for the male dolls: the cap above, plus a quiff, a side part, tight curls or a swept fringe
+  if (style === 'quiff'){ const q = Dm(sph(.08, 20, 14), Hm, hairG, 0, .232, .05); q.scale.set(1.15, .55, .85); q.rotation.x = -.35; }
+  if (style === 'short'){ const t = Dm(sph(.1, 20, 12), Hm, hairG, -.015, .215, .035); t.scale.set(1.12, .42, .9); }
+  if (style === 'crop'){ for (let i = 0; i < 40; i++){ const th = r() * PI * 2, ph = r() * 1.5; const v = new V3(Math.sin(ph) * Math.sin(th), Math.cos(ph), Math.sin(ph) * Math.cos(th)); if (v.z > .3 && v.y < .55) continue;
+      Dm(sph(.03 + r() * .014, 10, 8), Hm, hairG, v.x * .12, .135 + v.y * .12, v.z * .12 - .006); } }
+  if (style === 'swept'){ const f = Dm(sph(.1, 20, 12), Hm, hairG, .035, .21, .045); f.scale.set(1.1, .4, .75); f.rotation.z = -.4; }
   markDirty();
 }
-function setDoll(i){ const d = DOLLS[i] || DOLLS[0]; DM.dress.color.setHex(d.dress); DM.hair.color.setHex(d.hair); DM.hair.sheenColor.setHex(d.hair).lerp(new THREE.Color(0xffffff), .4); DM.skin.color.setHex(d.skin); DM.iris.color.setHex(d.eye); DM.lip.color.setHex(d.lip); buildHair(d.style); }
+function setDoll(i){ const d = DOLLS[i] || DOLLS[0], m = !!d.male; DM.dress.color.setHex(d.dress); DM.hair.color.setHex(d.hair); DM.hair.sheenColor.setHex(d.hair).lerp(new THREE.Color(0xffffff), .4); DM.skin.color.setHex(d.skin); DM.iris.color.setHex(d.eye); DM.lip.color.setHex(d.lip);
+  if (d.pants) DM.pants.color.setHex(d.pants);
+  FEM.forEach(o => o.visible = !m); MAS.forEach(o => o.visible = m); BROWS.forEach((o, k) => { o.scale.set(m ? 1.5 : 1, 1, m ? 1.5 : 1); o.rotation.z = PI / 2 + (k ? 1 : -1) * (m ? .04 : .18); });   // straighter brows on the male dolls
+  J.neck.scale.set(m ? 1.25 : 1, 1, m ? 1.25 : 1); J.lips[0].scale.set(m ? 1.1 : 1.3, m ? .3 : .38, .52); J.lips[1].scale.set(m ? 1.05 : 1.2, m ? .36 : .46, .56);
+  J.shN.position.x = m ? -.16 : -.15; J.shP.position.x = m ? .16 : .15; buildHair(d.style); }
 setDoll(0);
 // soft round shadow under her feet
 const blob = new THREE.Mesh(new THREE.CircleGeometry(.34, 32), new THREE.MeshBasicMaterial({map:canvasTex(128, 128, (g, w) => { const gr = g.createRadialGradient(w/2, w/2, 2, w/2, w/2, w/2); gr.addColorStop(0, 'rgba(90,20,50,.42)'); gr.addColorStop(1, 'rgba(90,20,50,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); }), transparent:true, depthWrite:false}));
@@ -1908,9 +1939,11 @@ $('#welcome').addEventListener('click', e => {
   if (id === 'overYes') resetVisit();
   if (id === 'retryBtn') boot();
 });
-const pass = {age:'', field:'', status:'', aiUse:'', aiFeel:0, doll:0};
-DOLLS.forEach((d, i) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.i = i; b.setAttribute('aria-label', 'Doll ' + d.name); b.setAttribute('aria-pressed', String(i === 0));
-  b.style.background = `linear-gradient(180deg,${hex(d.hair)} 0 35%,${hex(d.skin)} 35% 55%,${hex(d.dress)} 55%)`; $('#dollPick').appendChild(b); });
+const pass = {age:'', sex:'', field:'', status:'', aiUse:'', aiFeel:0, doll:0};
+DOLLS.forEach((d, i) => { if (d.male && !DOLLS[i - 1].male){ const br = document.createElement('span'); br.className = 'dollbreak'; br.setAttribute('aria-hidden', 'true'); $('#dollPick').appendChild(br); }   // male dolls on their own row
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.i = i; b.setAttribute('aria-label', (d.male ? 'Male doll ' : 'Doll ') + d.name); b.setAttribute('aria-pressed', String(i === 0)); if (d.male) b.classList.add('m');
+  b.style.background = d.male ? `linear-gradient(180deg,${hex(d.hair)} 0 20%,${hex(d.skin)} 20% 44%,${hex(d.dress)} 44% 72%,${hex(d.pants)} 72%)`
+    : `linear-gradient(180deg,${hex(d.hair)} 0 35%,${hex(d.skin)} 35% 55%,${hex(d.dress)} 55%)`; $('#dollPick').appendChild(b); });
 $('#dollPick').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; pass.doll = +b.dataset.i; $$('#dollPick button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); setDoll(pass.doll); });
 $('#passForm').addEventListener('click', e => { const btn = e.target.closest('[data-field] button'); if (!btn) return; const grp = btn.closest('[data-field]'); const v = btn.dataset.v;
   pass[grp.dataset.field] = /^\d$/.test(v) ? +v : v; $$('button', grp).forEach(x => x.setAttribute('aria-pressed', x === btn)); grp.classList.remove('need'); });
@@ -1918,15 +1951,20 @@ $('#passBack').onclick = () => { $('#pass').hidden = true; $('#welcome').hidden 
 if (CFG.CONTACT_EMAIL){ const c = $('#pContact'); c.hidden = false; c.textContent = 'Questions, or want your data deleted? Email ' + CFG.CONTACT_EMAIL; }
 $('#passGo').addEventListener('click', submitPass);
 $$('#pName,#pEmail').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); submitPass(); } }));
+function sendProfile(){   // sex and doll have no Visitors column, so each goes into the Ratings tab as a kind "profile" row (no Apps Script change needed)
+  const p = state.profile, d = DOLLS[p.doll || 0] || DOLLS[0], now = new Date().toISOString();
+  enqueue('rating', {key:state.visitorId + ':sex', visitorId:state.visitorId, artworkId:'sex', artworkNo:'', title:'Sex', reasons:p.sex || '', stage:'profile', kind:'profile', savedAt:now});
+  enqueue('rating', {key:state.visitorId + ':doll', visitorId:state.visitorId, artworkId:'doll', artworkNo:'', title:'Doll', reasons:d.name + (d.male ? ' (male doll)' : ' (female doll)'), stage:'profile', kind:'profile', savedAt:now});
+}
 function submitPass(){
   const err = $('#pErr'); const email = $('#pEmail').value.trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ err.textContent = 'Add a valid email so we can link your answers.'; flagMissing([$('#pEmail')]); $('#pEmail').focus(); return; }
-  const missing = ['age', 'field', 'status', 'aiUse', 'aiFeel'].filter(k => !pass[k]);
+  const missing = ['age', 'sex', 'field', 'status', 'aiUse', 'aiFeel'].filter(k => !pass[k]);
   if (missing.length){ err.textContent = 'Answer the highlighted questions to get your pass.'; flagMissing(missing.map(k => $(`#passForm [data-field="${k}"]`))); return; }
   if (!$('#pConsent').checked){ err.textContent = 'Tick the consent box to continue.'; flagMissing([$('#pConsent').closest('.check')]); return; }
   err.textContent = '';
-  newVisit({name:$('#pName').value.trim(), email, age:pass.age, field:pass.field, status:pass.status, aiUse:pass.aiUse, aiFeel:pass.aiFeel, doll:pass.doll, updates:$('#pUpdates').checked});
-  enqueue('visitor', visitorRow());
+  newVisit({name:$('#pName').value.trim(), email, age:pass.age, sex:pass.sex, field:pass.field, status:pass.status, aiUse:pass.aiUse, aiFeel:pass.aiFeel, doll:pass.doll, updates:$('#pUpdates').checked});
+  enqueue('visitor', visitorRow()); sendProfile();
   enterRoom();
 }
 function enterRoom(){
