@@ -307,7 +307,7 @@ textarea.input{min-height:72px;resize:vertical;line-height:1.45}
   <div class="card welcome">
     <div class="eyebrow" id="wHouse">A modern dream house</div>
     <h1 class="glitch" id="wTitle">The Barbie House</h1>
-    <p class="lede" id="wLede">Twelve pieces hang in this room. A person made some of them, AI made some, and some were made by both. Rate each piece first, then find out who made it.</p>
+    <p class="lede" id="wLede">Explore the rooms and rate the art before discovering who made it: human, AI or both. Your choices become your own Glitch issue.</p>
     <div class="makers"><span class="chip c-human">Human</span><span class="chip c-ai">AI</span><span class="chip c-both">Both</span></div>
     <div class="facts" id="wFacts"><span>About 8 minutes</span><span>Works on your phone</span></div>
     <div class="actions" id="wActions"><button class="btn primary" id="startBtn" disabled>Hanging the art…</button></div>
@@ -2620,11 +2620,8 @@ function showWelcome(){
   $('#welcome').hidden = false; $('#pass').hidden = true; $('#hud').hidden = true; $('#roombar').hidden = true;
   const rooms = navRooms(); if (!rooms.includes(room)) setRoomNow(rooms[0]);
   const n = houseTotal(); const acts = $('#wActions');
-  const words = ['No', 'One', 'Two', 'Three', 'Four', 'Five'], list = rooms.map(r => r === 'disco' ? `${roomName(r)}, where your own issue is printed` : `${roomName(r)} for ${ROOM_WHAT[r]}`);
   $('#wTitle').textContent = CFG.HOUSE_NAME; $('#wHouse').textContent = 'A Glitch issue you walk into'; $('#wProject').textContent = CFG.PROJECT_LINE;
-  $('#wLede').textContent = `${words[rooms.length] || rooms.length} rooms: ${list.slice(0, -1).join(', ')}, and ${list[list.length - 1]}.`
-    + (rooms.includes('pool') && rooms.includes('closet') ? ` ${roomName('pool')} explores six photographic worlds of fashion and making. ${roomName('closet')} brings together Quinn’s nine artworks across beauty, fashion illustration and digital fashion.` : '')
-    + ' Each piece was made by a person, by AI, or by both. Rate it first, then find out who made it. Every piece you rate becomes a page of your own issue.';
+  $('#wLede').textContent = 'Explore the rooms and rate the art before discovering who made it: human, AI or both. Your choices become your own Glitch issue.';
   $('#wFacts').innerHTML = `<span>${n} pieces</span><span>${rooms.length} rooms</span><span>About ${Math.max(3, Math.round(n * .9))} minutes</span><span>Switch on Do Not Disturb</span>`;
   if (!n){ acts.innerHTML = `<button class="btn primary" disabled>The room is being hung</button>`; $('#wStatus').textContent = 'No artworks yet. Come back soon.'; return; }
   $('#wStatus').textContent = '';
