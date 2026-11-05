@@ -27,7 +27,7 @@
 @media(max-height:520px){.pool-guide{display:none}.walk-pad{bottom:100px}.station-action{bottom:100px}.vr-note{display:none}}
 </style></head><body>
 <title>The Barbie House</title>
-<meta name="barbie-house-build" content="2026-11-05-walkable-v3-quinn-closet-v1-short-welcome-v2">
+<meta name="barbie-house-build" content="2026-11-05-direct-room-v4-quinn-closet-short-welcome">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -259,6 +259,19 @@ textarea.input{min-height:72px;resize:vertical;line-height:1.45}
 .vrhud .hintline{color:var(--fg);background:var(--glass);border-radius:999px;padding:5px 12px}
 .vrhud .brand{justify-self:start;width:max-content;max-width:100%}
 .vrhud .brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Keep the floor clear, with movement left and optional actions right. */
+.vrhud.direct-room{background:linear-gradient(180deg,#1a122526,transparent 20%,transparent 80%,#1a122526)}
+.direct-room .vr-top{align-items:flex-start;gap:12px}
+.direct-room .vr-top .brand{max-width:calc(100% - 130px)}
+.direct-room .brand span{white-space:normal;line-height:1.5}
+.direct-room .vr-world-pad{bottom:calc(24px + env(safe-area-inset-bottom,0px))!important;left:max(20px,env(safe-area-inset-left,0px))!important}
+.vrhud.direct-room .vr-bottom{align-self:flex-end;align-items:end;justify-items:end;gap:8px;max-width:calc(100% - 160px);pointer-events:none}
+.direct-room .vr-bottom .actions,.direct-room .vr-tools{justify-content:flex-end;pointer-events:none}
+.direct-room .vr-bottom button{pointer-events:auto}
+.direct-room .vr-tools .btn{font-size:10px;padding:7px 11px;background:#fffffff0}
+.direct-room .vr-bottom .btn{white-space:normal}
+@media(max-width:600px){.vrhud.direct-room{padding-left:12px;padding-right:12px}.direct-room .vr-world-pad{left:12px!important;bottom:calc(22px + env(safe-area-inset-bottom,0px))!important}.direct-room .vr-top .brand{max-width:calc(100% - 102px);padding:10px 12px}.direct-room .vr-top .brand b{font-size:16px}.direct-room .vr-top>.btn{font-size:10px;padding:10px}.vrhud.direct-room .vr-bottom{max-width:calc(100% - 142px)}.direct-room .vr-bottom .actions{display:grid;gap:5px}.direct-room .vr-bottom .actions .btn{font-size:11px;padding:10px 13px}.direct-room .vr-tools{gap:4px;flex-wrap:wrap}.direct-room .vr-tools .btn{font-size:9px;padding:6px 8px}}
+@media(max-height:500px){.vrhud.direct-room .vr-bottom{gap:5px}.direct-room .vr-world-pad{bottom:16px!important}.direct-room .vr-bottom .actions .btn{padding:8px 12px;font-size:10px}}
 .dollpick{display:flex;gap:10px;flex-wrap:wrap}
 .dollpick button{width:40px;height:54px;border-radius:20px 20px 9px 9px;border:2px solid transparent;padding:0}
 .dollpick button[aria-pressed="true"]{border-color:#fff3f7;box-shadow:0 0 0 3px var(--pink)}
@@ -398,16 +411,15 @@ textarea.input{min-height:72px;resize:vertical;line-height:1.45}
   <div class="cur-wrap" id="cWrap"></div>
 </section>
 
-<aside class="pool-guide" id="poolGuide" hidden><span class="eyebrow">The Pool House · 360°</span><h2>Six worlds.<br>Step inside.</h2><p><strong>Walk:</strong> WASD, arrow keys or the pad.<br><strong>Look:</strong> drag the room.<br>Tap a frame or headset to visit a world.</p></aside>
+<aside class="pool-guide" id="poolGuide" hidden><span class="eyebrow">The Pool House</span><h2>Follow your curiosity.</h2><p>Tap a picture to step inside.<br>Move with WASD, the arrows or the pad.</p></aside>
 <div class="walk-pad" id="walkPad" hidden aria-label="Move Barbie"><button data-move="up" aria-label="Walk forward">↑</button><button data-move="left" aria-label="Walk left">←</button><button data-move="down" aria-label="Walk backward">↓</button><button data-move="right" aria-label="Walk right">→</button></div>
 <div class="station-action" id="stationAction" hidden><small id="stationHint">Choose a world</small><button class="btn" id="enterStation">Visit a world</button></div>
-<div class="vr-loading" id="vrLoading" hidden role="status"><div><span class="eyebrow">360° experience</span><h2 id="vrLoadTitle">Opening your world…</h2><p id="vrLoadText">Preparing the panorama.</p><div class="actions"><button class="btn" id="vrRetry" hidden>Try again</button><button class="btn ghost" id="vrLoadCancel">Back to the room</button></div></div></div>
-<!-- inside the VR glasses -->
-<section class="vrhud" id="vr360" hidden aria-label="Walkable VR world">
- <div class="vr-top"><div class="brand"><b id="vrTitle">A world to explore</b><span id="vrSubtitle">360° · drag or use arrow keys to look</span></div><button class="btn" id="vrBack">Back to room</button></div>
- <div class="world-status"><strong>You’re inside the world.</strong><small>WASD / arrows to walk<br>Drag to turn · tap the floor to go there</small><output id="worldDistance">0.0 m explored</output></div>
- <div class="walk-pad vr-world-pad" id="vrWalkPad" role="group" aria-label="Move Barbie inside the world"><button data-move="up" aria-label="Walk forward in world">↑</button><button data-move="left" aria-label="Walk left in world">←</button><button data-move="down" aria-label="Walk backward in world">↓</button><button data-move="right" aria-label="Walk right in world">→</button></div>
- <div class="vr-bottom"><p class="vr-note">Walk around the pieces. Find a detail you would keep in your own magazine.</p><div class="vr-tools"><button class="btn" id="vrZoomOut" aria-label="Zoom out">−</button><button class="btn" id="vrReset">Reset view</button><button class="btn" id="vrZoomIn" aria-label="Zoom in">+</button><button class="btn" id="vrFullscreen">Full screen</button></div><div class="actions" style="justify-content:center"><button class="btn primary" id="vrDone">Reflect on this world</button><button class="btn" id="vrNext">Next world →</button><button class="btn" id="vrHeadset" hidden>Open in headset</button></div></div>
+<div class="vr-loading" id="vrLoading" hidden role="status"><div><span class="eyebrow">360° experience</span><h2 id="vrLoadTitle">Opening your world…</h2><p id="vrLoadText">Preparing your room.</p><div class="actions"><button class="btn" id="vrRetry" hidden>Try again</button><button class="btn ghost" id="vrLoadCancel">Back to the room</button></div></div></div>
+<!-- Walk directly inside the room. The same controls serve every image. -->
+<section class="vrhud direct-room" id="vr360" hidden aria-label="Explore the room">
+ <div class="vr-top"><div class="brand"><b id="vrTitle">A room to explore</b><span id="vrSubtitle">WASD / arrows to walk · drag to look</span></div><button class="btn" id="vrBack">Leave room</button></div>
+ <div class="walk-pad vr-world-pad" id="vrWalkPad" role="group" aria-label="Move Barbie around the room"><button data-move="up" aria-label="Walk forward in room">↑</button><button data-move="left" aria-label="Walk left in room">←</button><button data-move="down" aria-label="Walk backward in room">↓</button><button data-move="right" aria-label="Walk right in room">→</button></div>
+ <div class="vr-bottom"><div class="vr-tools"><button class="btn small" id="vrReset">Centre view</button><button class="btn small" id="vrFullscreen">Full screen</button></div><div class="actions"><button class="btn primary" id="vrDone">Rate this room</button><button class="btn" id="vrNext">Next room →</button></div></div>
 </section>
 <!-- the 3D piece: turn it around, or stand it in your own room -->
 <section class="view3d" id="view3d" hidden aria-labelledby="v3Title">
@@ -1683,11 +1695,10 @@ function buildSlot(i, a){
     center:art.getWorldPosition(new THREE.Vector3()), normal:new THREE.Vector3(0, 0, 1).applyQuaternion(q),
     right:new THREE.Vector3(1, 0, 0).applyQuaternion(q), up:new THREE.Vector3(0, 1, 0)};
   [art, back, ...frameMeshes].forEach(m => { m.userData.slot = i; if (a) hitTargets.push(m); });
-  if (a && a.kind === 'vr'){   // the glasses stand, on the floor beside the frame
-    const st = vrStand(); st.position.set(tw / 2 + .35, -ART_Y, .75); st.rotation.y = -.35; g.add(st); g.updateMatrixWorld(true);
-    slot.stand = st; slot.standPos = st.getWorldPosition(new THREE.Vector3());
-    st.traverse(m => { if (m.isMesh){ m.userData.slot = i; m.userData.vr = true; hitTargets.push(m); } });
-    OBST.push({x:slot.standPos.x, z:slot.standPos.z, r:.38});
+  if (a && a.kind === 'vr'){
+    // The picture is the doorway. There is no headset pedestal to walk around.
+    slot.standPos = slot.center.clone().addScaledVector(slot.normal, .9); slot.standPos.y = 0;
+    [art, back, ...frameMeshes].forEach(m => { m.userData.vr = true; });
   }
   if (a && (a.kind === '3d' || a.kind === 'ar')){   // the piece itself stands on the floor beside its frame
     const st = MODELS[a.model](); st.scale.setScalar(.85); st.position.set(tw / 2 + .35, -ART_Y, .75); g.add(st); g.updateMatrixWorld(true);
@@ -1708,7 +1719,7 @@ function drawPlaque(s){
   const st = state && state.answers[s.a.id];
   g.font = '600 20px "IBM Plex Mono", monospace';
   if (st && st.stage !== 'blind'){ const m = MAKER[s.a.reveal.maker] || MAKER.human; g.fillStyle = m.hex; g.beginPath(); g.arc(32, 140, 8, 0, Math.PI * 2); g.fill(); g.fillStyle = ink; g.fillText('Made by ' + m.short.toLowerCase() + (st.blind.guess === s.a.reveal.maker ? ' · you got it' : ''), 48, 147); }
-  else { g.fillStyle = th.ui; g.fillText(s.a.kind === 'vr' ? '360° · put on the glasses' : s.a.kind === '3d' ? '3D · tap to rate' : s.a.kind === 'ar' ? 'AR · tap to rate' : 'tap to rate', 24, 147); }
+  else { g.fillStyle = th.ui; g.fillText(s.a.kind === 'vr' ? 'tap to enter the room' : s.a.kind === '3d' ? '3D · tap to rate' : s.a.kind === 'ar' ? 'AR · tap to rate' : 'tap to rate', 24, 147); }
   s.ptex.needsUpdate = true; markDirty();
 }
 function clearSlots(){
@@ -1948,7 +1959,7 @@ function routeTo(from,to){
  const raw=[to];for(let k=end;k!==start;k=parent[k])raw.push(points[k]);raw.push(points[start]);raw.reverse();
  const smooth=[];let p=from,i=0;while(i<raw.length){let j=raw.length-1;while(j>i&&!clearWalkSegment(p,raw[j]))j--;smooth.push(raw[j]);p=raw[j];i=j+1;}return smooth;
 }
-function freeSpot(p){ p.x = clamp(p.x, -W / 2 + .45, W / 2 - .45); p.z = clamp(p.z, -D / 2 + .45, D / 2 - .45); p.y = 0;
+function freeSpot(p){ p.x = clamp(p.x, -W / 2 + .48, W / 2 - .48); p.z = clamp(p.z, -D / 2 + .48, D / 2 - .48); p.y = 0;
   for (const o of OBST){ const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), m = o.r + .30; if (d < m){ const k = d < 1e-3 ? 1 : m / d; p.x = o.x + (d < 1e-3 ? m : dx * k); p.z = o.z + dz * (d < 1e-3 ? 0 : k); } }
   return p; }
 function walkDoll(p, done, face){
@@ -1972,7 +1983,7 @@ function updateDoll(dt, t){
   const len = Math.hypot(vx, vz);
   if (len > .01){ const sp = 2.6 * Math.min(1, len + .35); dpos.x += vx / len * Math.min(len, sp * dt); dpos.z += vz / len * Math.min(len, sp * dt); freeSpot(dpos); heading = Math.atan2(vx, vz); walkT += dt * 8.5; moving = true; }
   else if (faceGoal !== null) heading = lerpAng(heading, faceGoal, Math.min(1, dt * 6));
-  if(mode==='vr360'){worldMeters+=Math.hypot(dpos.x-oldX,dpos.z-oldZ);const out=$('#worldDistance');out.textContent=worldMeters.toFixed(1)+' m explored';out.dataset.x=dpos.x.toFixed(3);out.dataset.z=dpos.z.toFixed(3);}
+  if(mode==='vr360')worldMeters+=Math.hypot(dpos.x-oldX,dpos.z-oldZ);
   if (act) actT += dt; if (act === 'wave' && actT > 2.4) act = null;
   for (const k of JK){ P[k][0] = P[k][1] = P[k][2] = 0; } P.by = 0; P.sk = 1;
   if (moving) walkPose(P, walkT); else if (act === 'wave') wavePose(P, actT); else if (act === 'vrOn') vrPose(P, actT); else if (act === 'look') lookPose(P, t); else idlePose(P, t);
@@ -2063,137 +2074,108 @@ function enterRoomCamera(){
   fly(followPose, 1300);
 }
 
-/* ---------------- the VR piece: she puts the glasses on, then you stand inside a 360° image ---------------- */
-const vrScene = new THREE.Scene(); vrScene.background = new THREE.Color('#141016');
-const cam360 = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, .05, 100);
-const panoGeo = new THREE.SphereGeometry(30, 72, 48); panoGeo.scale(-1, 1, 1);
-const pano = new THREE.Mesh(panoGeo, new THREE.MeshBasicMaterial({color:'#ffffff', toneMapped:false, fog:false})); vrScene.add(pano);
-const look360 = {yaw:0, pitch:0, fov:75};
+/* ---------------- Walk inside the image, without a separate platform ---------------- */
+const vrScene = new THREE.Scene(); vrScene.background = new THREE.Color('#e8e0d8');
+const cam360 = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, .05, 100);
+const look360 = {yaw:0, pitch:0, fov:62};
 let vrI = -1, vrT0 = 0, xrSession = null;
-// Live pieces stand in the 360° world on top of the image; plain 360° work shows untouched
 const vrProps = new THREE.Group(); vrProps.visible = false; vrScene.add(vrProps);
-vrScene.add(new THREE.HemisphereLight('#eaf4ff', '#2a3a66', 1.6)); { const l = new THREE.DirectionalLight('#ffffff', 1.5); l.position.set(-3, 5, 2); vrScene.add(l); }
+vrScene.add(new THREE.HemisphereLight('#fff7ef', '#807580', 2));
+{ const light=new THREE.DirectionalLight('#ffffff',2); light.position.set(-3,5,2); vrScene.add(light); }
 let vrAnim = null;
-// A shared walkable exhibition surrounds every source image. The photograph is
-// a backdrop, not a reconstructed room; authorship labels refer to that image.
-const worldView={yaw:0,height:2.7,distance:4.5};
-let worldReturn=null,worldFloor=null,worldMeters=0,worldFeature=null;
-const worldMarkers=[];
+const worldView={yaw:0,height:2.15,distance:2.75};
+let worldReturn=null,worldFloor=null,worldMeters=0,worldSourceTexture=null;
+// A panorama supplies appearance, not measured depth. All sources use the same
+// room envelope and controls; this does not reconstruct objects in the photo.
 function clearWorld(){
-  const geometries=new Set(),materials=new Set(),textures=new Set();
-  vrProps.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){materials.add(m);if(m.map)textures.add(m.map);}});
-  for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();
-  vrProps.clear();worldMarkers.length=0;worldFeature=null;worldFloor=null;
+  const geometries=new Set(),materials=new Set();
+  vrProps.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[])materials.add(m);});
+  for(const g of geometries)g.dispose();for(const m of materials)m.dispose();
+  // The image belongs to its gallery frame. Never dispose it on room exit.
+  vrProps.clear();worldFloor=null;worldSourceTexture=null;
 }
-function worldLabel(text,width=2.6){
-  const map=canvasTex(768,160,(g,w,h)=>{g.fillStyle='#fff9f1';g.fillRect(0,0,w,h);g.fillStyle='#413842';g.font='600 38px "IBM Plex Mono",monospace';g.textAlign='center';g.textBaseline='middle';g.fillText(text,w/2,h/2);});
-  return new THREE.Mesh(new THREE.PlaneGeometry(width,width*160/768),new THREE.MeshBasicMaterial({map,side:THREE.DoubleSide,toneMapped:false}));
+function roomImageMaterial(texture){
+  const material=new THREE.MeshBasicMaterial({map:texture,side:THREE.BackSide,toneMapped:false});
+  material.onBeforeCompile=shader=>{
+    shader.vertexShader='varying vec3 vRoomPoint;\n'+shader.vertexShader;
+    shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvRoomPoint = position;');
+    shader.fragmentShader='varying vec3 vRoomPoint;\n'+shader.fragmentShader;
+    shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',
+      'vec3 roomRay = normalize(vRoomPoint - vec3(0.0, 1.6, 0.0));\n'+
+      'vec2 roomUV = vec2(fract(atan(roomRay.z, roomRay.x) / 6.28318530718 + 1.0), asin(clamp(roomRay.y, -1.0, 1.0)) / 3.14159265359 + 0.5);\n'+
+      'diffuseColor *= texture2D(map, roomUV);');
+  };
+  material.customProgramCacheKey=()=> 'glitch-room-projection-v1';
+  return material;
 }
-function buildWalkableWorld(a){
-  clearWorld();vrProps.visible=true;vrScene.fog=null;vrAnim=null;
-  const textile=['vr-study-02-v3','vr-study-04-v3','vr-study-06-v3'].includes(a.id);
-  const palette=textile?['#bf7769','#d6b461','#8faaa0','#f1dbc0']:['#ce80a2','#78999f','#bdadca','#f2ddd1'];
-  const ivory=mStd('#fff7ec',.72),wood=mStd(textile?'#b58d65':'#c2a390',.7),metal=mStd('#e5bb83',.3,.65),dark=mStd('#45404b',.6);
-  const colors=palette.map(c=>new THREE.MeshPhysicalMaterial({color:c,roughness:.65,sheen:1,sheenRoughness:.55,side:THREE.DoubleSide}));
-  const floorMap=canvasTex(1024,1024,(g,w,h)=>{g.fillStyle=textile?'#eadbc9':'#eee0e4';g.fillRect(0,0,w,h);const random=rng(861);for(let j=0;j<2600;j++){g.fillStyle=['#d1b7ad','#f9f2e5','#c5c0bd','#c7a5b3'][j%4];const x=random()*w,y=random()*h;g.beginPath();g.ellipse(x,y,1+random()*3,1+random()*2,random()*3,0,PI*2);g.fill();}g.strokeStyle='#ffffff88';g.lineWidth=2;for(let j=0;j<=w;j+=128){g.beginPath();g.moveTo(j,0);g.lineTo(j,h);g.moveTo(0,j);g.lineTo(w,j);g.stroke();}});
-  const floorMat=new THREE.MeshStandardMaterial({map:floorMap,roughness:.72});
-  worldFloor=M(new THREE.PlaneGeometry(W,D),floorMat,vrProps,0,.002,0,-PI/2);worldFloor.userData.worldFloor=true;
-  M(rbox(W,.16,D),ivory,vrProps,0,-.08,0);
-  // Low walls and tall open frames establish a real navigable space; the full
-  // source panorama remains visible beyond the exhibition architecture.
-  for(const x of [-W/2,W/2]){M(rbox(.13,.55,D),ivory,vrProps,x,.275,0);for(const z of [-4.4,-1.6,1.4,4.4]){M(cyl(.035,.035,3.6,12),metal,vrProps,x,1.8,z);}M(rbox(.09,.09,D),metal,vrProps,x,3.6,0);}
-  for(const z of [-D/2,D/2]){M(rbox(W,.55,.13),ivory,vrProps,0,.275,z);M(rbox(W,.09,.09),metal,vrProps,0,3.6,z);}
-  for(const x of [-3.2,3.2]){M(new THREE.TorusGeometry(1.25,.035,10,48,PI),metal,vrProps,x,2,-3.9);for(const dx of [-1.25,1.25])M(cyl(.035,.035,2,12),metal,vrProps,x+dx,1,-3.9);}
-  // A clear centre aisle and three equally detailed exhibition islands.
-  OBST.splice(0,OBST.length,{x:-3.1,z:-1.45,r:1.08},{x:3.05,z:-1.45,r:1.03},{x:0,z:-2.85,r:.85});
-  const rug=M(new THREE.CircleGeometry(1.5,64),new THREE.MeshStandardMaterial({color:palette[3],roughness:1}),vrProps,0,.012,-2.85,-PI/2);
-  M(cyl(.75,.82,.3,48),ivory,vrProps,0,.15,-2.85);M(new THREE.TorusGeometry(.76,.018,8,48),metal,vrProps,0,.305,-2.85,PI/2);
-  worldFeature=G();worldFeature.position.set(0,.32,-2.85);vrProps.add(worldFeature);
-  if(textile){
-    for(let j=0;j<7;j++){const loop=M(new THREE.TorusGeometry(.5,.085,12,48),colors[j%4],worldFeature,Math.sin(j*.7)*.13,.3+j*.18,0,PI/2,.22*j,.16);loop.scale.x=1.08;}
-  }else{
-    const points=Array.from({length:40},(_,j)=>{const t=j/39;return new THREE.Vector2(gownRad(t)*.8,.1+t*1.65);});
-    M(new THREE.LatheGeometry(points,48),colors[0],worldFeature);M(cyl(.035,.035,1.85,12),metal,worldFeature,0,.95,0);M(sph(.075,20,14),metal,worldFeature,0,1.91,0);
-    for(let j=0;j<7;j++)M(new THREE.TorusGeometry(.48-j*.045,.012,8,40),colors[2],worldFeature,0,.25+j*.2,0,PI/2);
-  }
-  const table=G();table.position.set(3.05,0,-1.45);vrProps.add(table);
-  M(rbox(1.8,.12,1.35),wood,table,0,.88,0);for(const x of [-.73,.73])for(const z of [-.5,.5])M(cyl(.045,.065,.83,12),metal,table,x,.415,z);
-  for(let j=0;j<4;j++){const cloth=M(rbox(.75,.055,.56),colors[j],table,-.32,.98+j*.06,0);cloth.rotation.y=j*.04;}
-  for(let j=0;j<3;j++){M(cyl(.12,.12,.28,24),colors[j],table,.5,1.08,-.3+j*.3);M(cyl(.145,.145,.025,24),ivory,table,.5,1.23,-.3+j*.3);}
-  M(sph(.16,24,16),new THREE.MeshStandardMaterial({color:'#fff3db',emissive:'#ffe3ba',emissiveIntensity:.6}),table,.5,1.52,.35);M(cyl(.018,.018,.45,10),metal,table,.5,1.2,.35);
-  const left=G();left.position.set(-3.1,0,-1.45);vrProps.add(left);
-  if(textile){
-    for(const x of [-.9,.9])M(rbox(.08,2.65,.7),wood,left,x,1.325,0);
-    for(let shelf=0;shelf<4;shelf++){const y=.3+shelf*.68;M(rbox(1.9,.07,.72),wood,left,0,y,0);for(let j=0;j<5;j++){const ball=M(sph(.145,20,14),colors[(j+shelf)%4],left,-.68+j*.34,y+.2,0);ball.scale.set(1,1.1,1);for(let k=0;k<3;k++)M(new THREE.TorusGeometry(.146,.006,5,24),colors[(j+shelf)%4],left,-.68+j*.34,y+.2,0,.4+k*.6,.4*j);}}
-  }else{
-    for(const x of [-.95,.95]){M(cyl(.035,.035,2.5,16),metal,left,x,1.25,0);M(rbox(.52,.05,.65),ivory,left,x,.025,0);}
-    M(cyl(.035,.035,1.9,16),metal,left,0,2.5,0,0,0,PI/2);
-    for(let j=0;j<4;j++){const x=-.66+j*.44;M(new THREE.TorusGeometry(.13,.012,8,24),metal,left,x,2.31,0);const cloth=M(new THREE.PlaneGeometry(.38,1.3,8,16),colors[j],left,x,1.55,0);const points=cloth.geometry.attributes.position;for(let k=0;k<points.count;k++)points.setZ(k,Math.sin(points.getX(k)*42)*.045+Math.sin(points.getY(k)*4)*.025);cloth.geometry.computeVertexNormals();}
-  }
-  for(const [x,z,text]of [[-3.1,-.43,'01 / OBSERVE'],[3.05,-.43,'02 / COLLECT'],[0,-1.82,'03 / REIMAGINE']]){const label=worldLabel(text,1.65);label.position.set(x,.58,z);label.rotation.x=-.14;vrProps.add(label);}
-  const title=worldLabel(a.title.toUpperCase(),3.6);title.position.set(0,3.2,-4.25);vrProps.add(title);
-  const ringMat=new THREE.MeshBasicMaterial({color:'#f4d2ad',transparent:true,opacity:.65,side:THREE.DoubleSide});
-  for(const [x,z]of [[-1.5,1.3],[1.5,.1],[0,-.8]])worldMarkers.push(M(new THREE.RingGeometry(.16,.2,40),ringMat,vrProps,x,.018,z,-PI/2));
-  // Identical lighting and geometry density across all authorship groups.
-  for(const x of [-3,3]){M(cyl(.32,.56,.22,32),ivory,vrProps,x,3.25,-1.4);M(cyl(.012,.012,.24,8),metal,vrProps,x,3.48,-1.4);const light=new THREE.PointLight('#fff0d8',12,8,2);light.position.set(x,2.95,-1.4);vrProps.add(light);}
-  vrAnim=(dt,t)=>{if(worldFeature)worldFeature.rotation.y=Math.sin(t*.16)*.12;};
+function buildWalkableWorld(a,texture){
+  clearWorld();vrProps.visible=true;vrScene.fog=null;vrAnim=null;worldSourceTexture=texture;
+  // The photographed floor and walls form the room around Barbie. No extra
+  // deck, railing, stage or furniture is inserted in front of the image.
+  const envelope=new THREE.BoxGeometry(W,H,D).translate(0,H/2,0);
+  const walls=new THREE.Mesh(envelope,roomImageMaterial(texture));
+  walls.name='Source image room';vrProps.add(walls);
+  const floorGeometry=new THREE.PlaneGeometry(W,D).rotateX(-PI/2);
+  worldFloor=new THREE.Mesh(floorGeometry,new THREE.MeshBasicMaterial({visible:false,side:THREE.DoubleSide}));
+  worldFloor.name='Walking surface';worldFloor.userData.worldFloor=true;vrProps.add(worldFloor);
+  OBST.length=0;
 }
-function fillVR(a){
-  if(!worldReturn)worldReturn={position:dpos.clone(),heading,follow:{...follow},obstacles:OBST.map(o=>({...o}))};
-  buildWalkableWorld(a);vrScene.add(doll);doll.visible=true;
-  dpos.set(0,0,2.65);doll.position.copy(dpos);heading=PI;doll.rotation.y=PI;
-  target=null;walkPath=[];onArrive=null;faceGoal=null;act=null;worldMeters=0;
+function stopWalking(){
+  target=null;walkPath=[];onArrive=null;faceGoal=null;act=null;
   for(const k in keys)keys[k]=false;
-  $('#worldDistance').textContent='0.0 m explored';
+  $$('#walkPad button,#vrWalkPad button').forEach(button=>button.setAttribute('aria-pressed','false'));
+}
+function fillVR(a,texture){
+  if(!worldReturn)worldReturn={position:dpos.clone(),heading,follow:{...follow},obstacles:OBST.map(o=>({...o}))};
+  buildWalkableWorld(a,texture);vrScene.add(doll);doll.visible=true;vrWear(false);
+  dpos.set(0,0,1.35);doll.position.copy(dpos);heading=PI;doll.rotation.y=PI;
+  stopWalking();worldMeters=0;
 }
 function leaveWalkableWorld(){
-  if(!worldReturn)return;scene.add(doll);dpos.copy(worldReturn.position);doll.position.copy(dpos);heading=worldReturn.heading;doll.rotation.y=heading;
+  if(!worldReturn)return;
+  scene.add(doll);dpos.copy(worldReturn.position);doll.position.copy(dpos);heading=worldReturn.heading;doll.rotation.y=heading;
   Object.assign(follow,worldReturn.follow);OBST.splice(0,OBST.length,...worldReturn.obstacles);
-  worldReturn=null;target=null;walkPath=[];onArrive=null;faceGoal=null;act=null;for(const k in keys)keys[k]=false;
-  clearWorld();vrProps.visible=false;pano.material.map=null;pano.material.needsUpdate=true;
+  worldReturn=null;stopWalking();clearWorld();vrProps.visible=false;
 }
 function worldCamera(snap=false,dt=.016){
-  if(renderer.xr.isPresenting){cam360.position.set(dpos.x,1.7,dpos.z);pano.position.copy(cam360.position);return;}
-  const direction=new V3(Math.sin(worldView.yaw),0,Math.cos(worldView.yaw));let distance=worldView.distance;
-  const wallLimit=(p,v,min,max)=>v>1e-4?(max-p)/v:v<-.0001?(min-p)/v:Infinity;
-  distance=Math.max(.85,Math.min(distance,wallLimit(doll.position.x,direction.x,-W/2-2.5,W/2+2.5),wallLimit(doll.position.z,direction.z,-D/2-2.5,D/2+2.5)));
-  const desired=doll.position.clone().addScaledVector(direction,distance);desired.y=worldView.height;
-  cam360.position.lerp(desired,snap?1:1-Math.exp(-dt*7));
-  cam360.lookAt(doll.position.x,1.02,doll.position.z);pano.position.copy(cam360.position);
-  cam360.aspect=innerWidth/innerHeight;cam360.fov=innerWidth/innerHeight<.8?67:58;cam360.updateProjectionMatrix();
+  const dir=new V3(Math.sin(worldView.yaw),0,Math.cos(worldView.yaw));
+  const base=doll.position,edge=.18;
+  const limit=(p,v,min,max)=>v>1e-4?(max-p)/v:v<-.0001?(min-p)/v:Infinity;
+  const distance=Math.max(.2,Math.min(worldView.distance,limit(base.x,dir.x,-W/2+edge,W/2-edge),limit(base.z,dir.z,-D/2+edge,D/2-edge)));
+  const desired=base.clone().addScaledVector(dir,distance);
+  desired.x=clamp(desired.x,-W/2+edge,W/2-edge);desired.z=clamp(desired.z,-D/2+edge,D/2-edge);
+  desired.y=clamp(worldView.height+Math.max(0,1.15-distance)*.6,1.8,H-.25);
+  cam360.position.lerp(desired,snap?1:1-Math.exp(-dt*9));
+  cam360.lookAt(base.x-dir.x*.65,1.15,base.z-dir.z*.65);
+  cam360.aspect=innerWidth/innerHeight;cam360.fov=innerWidth/innerHeight<.8?69:62;cam360.updateProjectionMatrix();
 }
 function driftVR(dt, now){ if (vrAnim && !REDUCED) vrAnim(dt, now / 1000); }
 function startVR(i){
   if(mode==='vr360'||mode==='vrwalk')return;
-  walkPath=[]; target=null; onArrive=null; for(const k in keys)keys[k]=false;
-  const s = slots[i]; if (!s || !s.a || !s.stand) return;
-  if (mode === 'focus'){ closeSheet(); }
-  mode = 'vrwalk'; focusI = i; hideCoach(); renderRoomUI();
-  const spot = freeSpot(s.standPos.clone().addScaledVector(s.normal, .25).addScaledVector(s.right, -.6));   // beside the stand, so you see her face
-  fly(() => standPose(s), 1100);
-  walkDoll(spot, () => { act = 'vrOn'; actT = 0; vrStartFx(s); }, headingTo(spot, s.standPos));
-  if (REDUCED){ target = null; dpos.copy(spot); open360(i); }
+  const s=slots[i];if(!s?.a||s.a.kind!=='vr')return;
+  stopWalking();closeSheet();flight=null;vrFx=null;vrWear(false);
+  mode='vrwalk';focusI=i;hideCoach();renderRoomUI();
+  open360(i);
 }
 let vrRequest=0;
 async function open360(i){
  const s=slots[i];if(!s?.a)return;const request=++vrRequest;
  target=null;walkPath=[];onArrive=null;flight=null;vrFx=null;act=null;
- $('#vrLoading').hidden=false;$('#vrLoadTitle').textContent='Opening your world…';$('#vrLoadText').textContent='Preparing the panorama.';$('#vrRetry').hidden=true;
+ $('#vrLoading').hidden=false;$('#vrLoadTitle').textContent='Opening your world…';$('#vrLoadText').textContent='Preparing your room.';$('#vrRetry').hidden=true;
  try{
    if(!s.ready){const url=await imageURL(s.a);if(!url)throw Error('Missing image');const t=await loadTex(url,VRTEX);if(request!==vrRequest||slots[i]!==s){t.dispose();return;}s.art.material.map=t;s.art.material.needsUpdate=true;s.ready=true;}
    if(request!==vrRequest||slots[i]!==s)return;
    if(!s.art.material.map?.image?.width)throw Error('The panorama is not ready.');
    renderer.initTexture(s.art.material.map);
-   vrI=i;focusI=i;mode='vr360';vrWear(true,s);
-   pano.material.map=s.art.material.map;pano.material.needsUpdate=true;fillVR(s.a);resetVRView();
+   vrI=i;focusI=i;mode='vr360';
+   fillVR(s.a,s.art.material.map);resetVRView();
    $('#vrLoading').hidden=true;
-   $('#vrTitle').textContent=num(i)+' · '+s.a.title;$('#vrSubtitle').textContent='Walk with WASD / arrows · drag to look';
+   $('#vrTitle').textContent=s.a.title;$('#vrSubtitle').textContent='WASD / arrows to walk · drag to look · tap the floor to move';
    $('#vr360').hidden=false;$('#hud').hidden=true;$('#roombar').hidden=true;$('#poolGuide').hidden=true;$('#walkPad').hidden=true;$('#stationAction').hidden=true;vrT0=performance.now();
-   $('#vrHeadset').hidden=true;try{navigator.xr?.isSessionSupported('immersive-vr').then(ok=>{if(request===vrRequest)$('#vrHeadset').hidden=!ok;}).catch(()=>{});}catch(e){}
    $('#vrBack').focus({preventScroll:true});markDirty();
  }catch(e){if(request!==vrRequest)return;console.warn('Panorama load failed',s.a.id,e);s.ready=false;$('#vrLoading').hidden=false;$('#vrLoadTitle').textContent='This world could not load';$('#vrLoadText').textContent='Try again, or return to the room and choose another world.';$('#vrRetry').hidden=false;$('#vrRetry').onclick=()=>open360(i);}
 }
-function resetVRView(){worldView.yaw=0;worldView.height=2.7;worldView.distance=4.5;look360.fov=75;worldCamera(true);markDirty();}
+function resetVRView(){worldView.yaw=heading+PI;worldView.height=2.15;worldView.distance=2.75;worldCamera(true);markDirty();}
 function recordVR(){const s=slots[vrI];if(!s)return;const st=ans(s.a.id);st.vrSeconds=(st.vrSeconds||0)+Math.max(0,Math.round((performance.now()-vrT0)/1000));st.vrSeen=true;saveState();}
 async function close360(reflect=true){
  if(mode!=='vr360')return;const i=vrI,s=slots[i];recordVR();++vrRequest;
@@ -2202,13 +2184,10 @@ async function close360(reflect=true){
  if(reflect)focusSlot(i);else{fly(followPose,REDUCED?1:450);$('#enterStation').focus({preventScroll:true});}markDirty();
 }
 $('#vrDone').onclick=()=>close360(true);$('#vrBack').onclick=()=>close360(false);
-$('#vrNext').onclick=async()=>{const next=(vrI+1)%artworks.length;await close360(false);startVR(next);};
+$('#vrNext').onclick=async()=>{if(mode!=='vr360'||$('#vrNext').disabled)return;$('#vrNext').disabled=true;try{const next=(vrI+1)%artworks.length;await close360(false);startVR(next);}finally{$('#vrNext').disabled=false;}};
 $('#vrReset').onclick=resetVRView;
-$('#vrZoomIn').onclick=()=>{worldView.distance=clamp(worldView.distance-.45,1.6,5);markDirty();};
-$('#vrZoomOut').onclick=()=>{worldView.distance=clamp(worldView.distance+.45,1.6,5);markDirty();};
 $('#vrFullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch(e){toast('Full screen is unavailable in this browser.');}};
 $('#vrLoadCancel').onclick=()=>{++vrRequest;$('#vrLoading').hidden=true;vrFx=null;vrWear(false,slots[focusI]);mode='room';act=null;target=null;walkPath=[];onArrive=null;flight=null;renderRoomUI();markDirty();};
-$('#vrHeadset').onclick=async()=>{try{const session=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']});renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType('local');await renderer.xr.setSession(session);xrSession=session;session.addEventListener('end',()=>{xrSession=null;renderer.xr.enabled=false;applyInset();markDirty();});}catch(e){toast('Couldn’t open the headset view here');}};
 
 /* ---------------- 3D and AR pieces: model-viewer turns them, and hands AR pieces to the phone's own AR ---------------- */
 const glbs = new Map(); let v3T0 = 0;
@@ -2267,14 +2246,13 @@ $('#roomBtn').onclick = () => goRoom(nextRoom(true) || nextRoom(false));
 let lastT = performance.now(), lastDraw = 0;
 function tick(now){
   const dt = Math.min(.05, Math.max(0, (now - lastT) / 1000)); lastT = now;
-  if (renderer.xr.isPresenting){ updateDoll(dt,now/1000);worldCamera(false,dt);driftVR(dt, now);doll.visible=false;renderer.render(vrScene, cam360);doll.visible=true;return; }
   if (!$('#curator').hidden) return;
   if (mode === 'build') heading = now / 1000 * .55;   // the doll turns slowly while you build it
   const busy = updateDoll(dt, now / 1000);
   const [tx, ty] = insetTargets(); const k = REDUCED ? 1 : .14;
   const anyKey = keys.up || keys.down || keys.left || keys.right;
   const active = flight || inset.x !== tx || inset.y !== ty || drag || pinch || target || busy || anyKey || mode === 'vrwalk' || mode === 'build' || (mode === 'vr360' && !!vrAnim);
-  const idleRoom = mode === 'room' && doll.visible;
+  const idleRoom = (mode === 'room'||mode==='vr360') && doll.visible;
   if (!active && !dirty){ if (!idleRoom || now - lastDraw < 33) return; }   // an idle room breathes at ~30 fps
   dirty = false; lastDraw = now;
   inset.x += (tx - inset.x) * k; inset.y += (ty - inset.y) * k; if (Math.abs(tx - inset.x) < .5) inset.x = tx; if (Math.abs(ty - inset.y) < .5) inset.y = ty;
@@ -2287,7 +2265,7 @@ function tick(now){
   } else if (mode === 'focus' && focusI >= 0){ const p = focusPose(focusI); camera.position.copy(p.pos); camera.quaternion.copy(p.quat); }
   else if (mode === 'build'){ if (camera.fov !== buildFov()){ camera.fov = buildFov(); applyInset(); } const p = buildPose(); camera.position.copy(p.pos); camera.quaternion.copy(p.quat); }
   else if (mode === 'intro'){ camera.position.set(.6, EYE, 3.7); camera.quaternion.copy(quatLooking(camera.position, new THREE.Vector3(-.4, 1.75, -D / 2))); }
-  else if (mode === 'vrwalk' && slots[focusI]){ const p = standPose(slots[focusI]); const kc = 1 - Math.exp(-dt * 4); camera.position.lerp(p.pos, kc); camera.quaternion.slerp(p.quat, kc); }
+  else if (mode === 'vrwalk'){ /* Hold the camera while the selected room loads. */ }
   else { const p = followPose(); const kc = 1 - Math.exp(-dt * 4.5); camera.position.lerp(p.pos, kc); camera.quaternion.slerp(p.quat, 1 - Math.exp(-dt * 6)); }
   roomTick(dt, now / 1000); updateNearestStation(); renderer.render(scene, camera);
 }
@@ -2309,11 +2287,11 @@ cv.addEventListener('pointermove', e => {
   if ((mode === 'room' || mode === 'focus') && !ptrs.size && e.pointerType === 'mouse'){ const hit = !flight && pick(e); const o = hit && hit.object.userData; cv.style.cursor = o && (o.slot !== undefined || o.doll) ? 'pointer' : (mode === 'room' ? 'grab' : 'default'); }
   if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
   if (pinch && ptrs.size === 2){ const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y);
-    if (mode === 'focus') zoom = clamp(pinch.z * pinch.d / d, .3, 1); if (mode === 'vr360') worldView.distance = clamp(pinch.w * pinch.d / d, 1.6, 5); markDirty(); return; }
+    if (mode === 'focus') zoom = clamp(pinch.z * pinch.d / d, .3, 1); if (mode === 'vr360') worldView.distance = clamp(pinch.w * pinch.d / d, 1.4, 4); markDirty(); return; }
   if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
   if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > (e.pointerType === 'touch' ? 12 : 6)) drag.moved = true;
   if (!drag.moved) return;
-  if (mode === 'vr360'){worldView.yaw-=dx*.006;worldView.height=clamp(worldView.height+dy*.007,1.65,4.2);markDirty();return;}
+  if (mode === 'vr360'){worldView.yaw-=dx*.006;worldView.height=clamp(worldView.height+dy*.007,1.8,H-.5);markDirty();return;}
   if (flight) return;
   if (mode === 'room'){ follow.yaw -= dx * .006; follow.h = clamp(follow.h + dy * .006, 1.4, 3.4); }
   else if (mode === 'focus' && zoom < .98){ const s = slots[focusI]; const k = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.distanceTo(s.center) / (innerHeight + inset.y); pan.x -= dx * k; pan.y += dy * k; }
@@ -2323,7 +2301,7 @@ function endPtr(e){
   if (ptrs.size === 0 && drag){ const tap = !drag.moved && performance.now() - drag.t < 700; drag = null; if (tap && e.type!=='pointercancel') onTap(e); }
 }
 cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
-cv.addEventListener('wheel', e => { if (mode === 'vr360'){e.preventDefault();worldView.distance=clamp(worldView.distance*(1+e.deltaY*.001),1.6,5);markDirty();return;}
+cv.addEventListener('wheel', e => { if (mode === 'vr360'){e.preventDefault();worldView.distance=clamp(worldView.distance*(1+e.deltaY*.001),1.4,4);markDirty();return;}
   if (mode !== 'focus') return; e.preventDefault(); zoom = clamp(zoom * (1 + e.deltaY * .0012), .3, 1); markDirty(); }, {passive:false});
 function onTap(e){
   if(mode==='vr360'){
@@ -2332,7 +2310,7 @@ function onTap(e){
     if(hit.object===dollHit){act='wave';actT=0;markDirty();return;}
     walkDoll(hit.point);markDirty();return;
   }
-  if (mode === 'vrwalk'){ return; }   // tap to skip her putting the glasses on
+  if (mode === 'vrwalk'){ return; }   // wait for the room image to finish loading
   const hit = pick(e); if (!hit) return; const o = hit.object.userData;
   if (o.doll){ act = 'wave'; actT = 0; markDirty(); return; }
   if (o.slot !== undefined){
@@ -2348,7 +2326,8 @@ addEventListener('keydown', e => {
   if ((mode === 'room'||mode==='vr360') && KEYMAP[e.code]){ e.preventDefault(); flight=null; keys[KEYMAP[e.code]] = true; markDirty(); }
 });
 addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
-addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+addEventListener('blur', () => { if(mode==='room'||mode==='vr360')stopWalking();else for(const k in keys)keys[k]=false; });
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&(mode==='room'||mode==='vr360'))stopWalking();});
 
 /* ---------------- room UI ---------------- */
 const placed = () => slots.filter(s => s && s.a);
@@ -2380,7 +2359,7 @@ function showCoach(){ const c = $('#coach'); c.hidden = false; c.style.opacity =
 function hideCoach(){ const c = $('#coach'); c.style.opacity = 0; setTimeout(() => c.hidden = true, 500); }
 
 let nearestStation=-1, nearestText='';
-function updateNearestStation(){if(room!=='pool'||mode!=='room')return;let dist=Infinity;for(const s of placed()){const d=doll.position.distanceTo(s.standPos||s.center);if(d<dist){dist=d;nearestStation=s.i;}}const s=slots[nearestStation];if(!s)return;const text='Visit '+num(s.i)+' · '+s.a.title;if(text!==nearestText){$('#enterStation').textContent=text;nearestText=text;}$('#stationHint').textContent='Nearest world · E to enter';}
+function updateNearestStation(){if(room!=='pool'||mode!=='room')return;let dist=Infinity;for(const s of placed()){const d=doll.position.distanceTo(s.standPos||s.center);if(d<dist){dist=d;nearestStation=s.i;}}const s=slots[nearestStation];if(!s)return;const text='Enter '+s.a.title;if(text!==nearestText){$('#enterStation').textContent=text;nearestText=text;}$('#stationHint').textContent='Nearby room · E to enter';}
 $('#enterStation').onclick=()=>{if(nearestStation>=0&&mode==='room')startVR(nearestStation);};
 addEventListener('keydown',e=>{if(e.code==='KeyE'&&room==='pool'&&mode==='room'&&!e.target.closest('input,textarea,select')){e.preventDefault();$('#enterStation').click();}});
 for(const button of $$('#walkPad button,#vrWalkPad button')){button.addEventListener('pointerdown',e=>{if(mode!=='room'&&mode!=='vr360')return;e.preventDefault();button.setPointerCapture(e.pointerId);flight=null;keys[button.dataset.move]=true;button.setAttribute('aria-pressed','true');markDirty();});for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,()=>{keys[button.dataset.move]=false;button.setAttribute('aria-pressed','false');});}
@@ -2400,7 +2379,7 @@ function revealHTML(a, st){
   return `<div class="reveal" style="border-color:${m.hex}">
     <span class="eyebrow">${a.study ? 'Panoramic image made by' : 'Made by'}</span><div class="who" style="color:${m.hex}">${esc(m.who)}</div>
     <div class="verdict ${right ? 'yes' : 'no'}">${right ? '✓ You got it.' : '✗ You said ' + esc(g ? g.short : '?') + '.'}</div>
-    ${a.study ? '<p>The walkable exhibition, furniture and movement system are the same AI-coded interface layer in every world. This label describes the source image around it.</p>' : ''}
+    ${a.study ? '<p>This label describes the room image. The walking interface is AI-coded and shared across all rooms. The space is a projection of the image, not a reconstruction of its objects.</p>' : ''}
     ${(r.credit || r.how || r.time) ? `<dl>${r.credit ? `<dt>Credit</dt><dd>${esc(r.credit)}</dd>` : ''}${r.how ? `<dt>How</dt><dd>${esc(r.how)}</dd>` : ''}${r.time ? `<dt>Time</dt><dd>${esc(r.time)}</dd>` : ''}</dl>` : ''}
   </div>`;
 }
@@ -2414,7 +2393,7 @@ function openSheet(i){
 function closeSheet(){ $('#sheet').classList.add('closed'); }
 function renderSheetBody(){
   const s = slots[focusI]; if (!s) return; const a = s.a, st = ans(a.id); const b = st.blind; let html = '';
-  const vrRow = a.kind === 'vr' ? `<div class="vrnote"><span>A 360° piece you see through the glasses.</span><button class="btn small" id="againVR">Put the glasses on again</button></div>` : a.kind === '3d' ? `<div class="vrnote"><span>A 3D piece. Turn it to see every side.</span><button class="btn small" id="open3D">Turn it in 3D</button></div>` : a.kind === 'ar' ? `<div class="vrnote"><span>An AR piece. Stand it in your own room.</span><button class="btn small" id="open3D">Open in AR</button></div>` : '';
+  const vrRow = a.kind === 'vr' ? `<div class="vrnote"><span>Take another walk before you decide.</span><button class="btn small" id="againVR">Walk around again</button></div>` : a.kind === '3d' ? `<div class="vrnote"><span>A 3D piece. Turn it to see every side.</span><button class="btn small" id="open3D">Turn it in 3D</button></div>` : a.kind === 'ar' ? `<div class="vrnote"><span>An AR piece. Stand it in your own room.</span><button class="btn small" id="open3D">Open in AR</button></div>` : '';
   if (st.stage === 'blind'){
     html = `<div class="step">${vrRow}<h3>Rate it first</h3>${DIMS.map(([f, l]) => scaleHTML(f, l, b[f])).join('')}
       ${segHTML('guess', 'Who made it?', [['human','A human'],['ai','AI'],['both','Both']], b.guess, 'makerseg')}
