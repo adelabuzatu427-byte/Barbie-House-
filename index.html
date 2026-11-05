@@ -27,7 +27,7 @@
 @media(max-height:520px){.pool-guide{display:none}.walk-pad{bottom:100px}.station-action{bottom:100px}.vr-note{display:none}}
 </style></head><body>
 <title>The Barbie House</title>
-<meta name="barbie-house-build" content="2026-11-05-walkable-v3-quinn-closet-v1">
+<meta name="barbie-house-build" content="2026-11-05-walkable-v3-quinn-closet-v1-short-welcome-v2">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -305,11 +305,10 @@ textarea.input{min-height:72px;resize:vertical;line-height:1.45}
 <!-- welcome -->
 <section class="overlay" id="welcome" aria-labelledby="wTitle">
   <div class="card welcome">
-    <div class="eyebrow" id="wHouse">A modern dream house</div>
+    <div class="eyebrow" id="wHouse">A Glitch issue you walk into</div>
     <h1 class="glitch" id="wTitle">The Barbie House</h1>
-    <p class="lede" id="wLede">Explore the rooms and rate the art before discovering who made it: human, AI or both. Your choices become your own Glitch issue.</p>
+    <p class="lede" id="wLede">Step inside a world of art and imagination. Follow your curiosity and discover what creativity means to you.</p>
     <div class="makers"><span class="chip c-human">Human</span><span class="chip c-ai">AI</span><span class="chip c-both">Both</span></div>
-    <div class="facts" id="wFacts"><span>About 8 minutes</span><span>Works on your phone</span></div>
     <div class="actions" id="wActions"><button class="btn primary" id="startBtn" disabled>Hanging the art…</button></div>
     <p class="status" id="wStatus" role="status"></p>
     <p class="demo-note" id="wDemo" hidden>Preview mode: nothing is sent online yet, answers stay on this device. Open Curator to connect your Google Sheet.</p>
@@ -2621,8 +2620,6 @@ function showWelcome(){
   const rooms = navRooms(); if (!rooms.includes(room)) setRoomNow(rooms[0]);
   const n = houseTotal(); const acts = $('#wActions');
   $('#wTitle').textContent = CFG.HOUSE_NAME; $('#wHouse').textContent = 'A Glitch issue you walk into'; $('#wProject').textContent = CFG.PROJECT_LINE;
-  $('#wLede').textContent = 'Explore the rooms and rate the art before discovering who made it: human, AI or both. Your choices become your own Glitch issue.';
-  $('#wFacts').innerHTML = `<span>${n} pieces</span><span>${rooms.length} rooms</span><span>About ${Math.max(3, Math.round(n * .9))} minutes</span><span>Switch on Do Not Disturb</span>`;
   if (!n){ acts.innerHTML = `<button class="btn primary" disabled>The room is being hung</button>`; $('#wStatus').textContent = 'No artworks yet. Come back soon.'; return; }
   $('#wStatus').textContent = '';
   if (state && state.profile){ acts.innerHTML = `<button class="btn primary" id="resumeBtn">Continue${state.profile.name ? ' as ' + esc(state.profile.name) : ''}</button><button class="btn ghost" id="overBtn">Not you? Start over</button>
